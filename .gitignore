@@ -1,0 +1,69 @@
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ===============================
+# Build / Runtime
+# ===============================
+dist/
+build/
+coverage/
+
+# ===============================
+# Environment Variables
+# ===============================
+.env
+.env.local
+.env.development
+.env.production
+
+# ===============================
+# Logs
+# ===============================
+logs/
+*.log
+
+# ===============================
+# OS Files
+# ===============================
+.DS_Store
+Thumbs.db
+
+# ===============================
+# IDEs & Editors
+# ===============================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ===============================
+# JetBrains IDE
+# ===============================
+.idea/
+
+# ===============================
+# Visual Studio / VS Code
+# ===============================
+.vs/
+.vscode/
+
+# ===============================
+# Temporary files
+# ===============================
+tmp/
+temp/
+
+# ===============================
+# WebSocket / Runtime State
+# ===============================
+*.pid
+*.sock
+
+# ===============================
+# Docker & Environment
+# ===============================
+docker-compose.override.yml
+.env.docker

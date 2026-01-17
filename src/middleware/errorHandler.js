@@ -4,7 +4,7 @@ const logger = require('../config/logger');
  * Centralized error handling
  * This middleware is triggered when we call next(err)
  */
-function errorHandler(error, req, res, next) {
+function errorHandler(error, req, res) {
     logger.error('Request error', {
         error: error.message,
         stack: error.stack,

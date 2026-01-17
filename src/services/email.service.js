@@ -1,20 +1,19 @@
 const nodeMailer = require('nodemailer');
-const {smtp} = require('../config');
+const {smtp} = require('../config/env');
 
 const transporter = nodeMailer.createTransport({
-    host: smtp.SMTP.host,
-    port: smtp.SMTP.port,
-    secure: smtp.SMTP.port === 465,
+    host: smtp.host,
+    port: smtp.port,
     auth: {
-        user: smtp.SMTP.user,
-        pass: smtp.SMTP.pass,
+        user: smtp.user,
+        pass: smtp.pass,
     },
 });
 
 async function sendEmail(to, subject, text) {
     try{
         await transporter.sendMail({
-            from: `"No Reply" <${smtp.SMTP.user}>`,
+            from: `"No Reply" <${smtp.user}>`,
             to,
             subject,
             text,

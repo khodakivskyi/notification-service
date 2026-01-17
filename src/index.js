@@ -1,5 +1,6 @@
 const express = require('express');
 const {server} = require('./config');
+const logger = require('./config/logger');
 
 const port = server.PORT;
 
@@ -11,5 +12,5 @@ app.get('/', (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
+    logger.info('Server started', { port: port });
 });

@@ -11,7 +11,7 @@ const transporter = nodeMailer.createTransport({
     },
 });
 
-export async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, text) {
     try{
         await transporter.sendMail({
             from: `"No Reply" <${smtp.SMTP.user}>`,
@@ -24,3 +24,5 @@ export async function sendEmail(to, subject, text) {
         console.error('Error sending email:', error);
     }
 }
+
+module.exports = sendEmail;

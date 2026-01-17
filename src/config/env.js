@@ -1,4 +1,3 @@
-require('dotenv').config();
 const logger = require('./logger');
 const joi = require('joi');
 

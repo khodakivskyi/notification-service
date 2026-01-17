@@ -4,6 +4,7 @@ const config = require('../../config/env');
 const fs = require('fs').promises;
 const Handlebars = require('handlebars');
 const path = require('path');
+const {withRetry} = require('../../utils/retry');
 
 class EmailService {
     constructor() {
@@ -50,28 +51,30 @@ class EmailService {
      * @param {string} verificationLink - Verification link
      */
     async sendVerificationEmail(to, username, verificationLink) {
-        try {
-            const html = await this.renderTemplate('verification', {
-                username,
-                verificationLink,
-            });
+        return withRetry(async () => {
+            try {
+                const html = await this.renderTemplate('verification', {
+                    username,
+                    verificationLink,
+                });
 
-            const mailOptions = {
-                from: config.smtp.user,
-                to: to,
-                subject: 'Verify your email',
-                html: html,
-            };
+                const mailOptions = {
+                    from: config.smtp.user,
+                    to: to,
+                    subject: 'Verify your email',
+                    html: html,
+                };
 
-            const info = await this.transporter.sendMail(mailOptions);
+                const info = await this.transporter.sendMail(mailOptions);
 
-            logger.info('Verification email sent', {to, messageId: info.messageId});
+                logger.info('Verification email sent', {to, messageId: info.messageId});
 
-            return info;
-        } catch (error) {
-            logger.error('Error sending verification email', {to, error});
-            throw error;
-        }
+                return info;
+            } catch (error) {
+                logger.error('Error sending verification email', {to, error});
+                throw error;
+            }
+        });
     }
 
 
@@ -82,24 +85,26 @@ class EmailService {
      * @param {string} message - message
      */
     async sendNotification(to, subject, message) {
-        try {
-            const mailOptions = {
-                from: config.smtp.user,
-                to: to,
-                subject: subject,
-                text: message,
-                html: `<p>${message}</p>`,
-            };
+        return withRetry(async () => {
+            try {
+                const mailOptions = {
+                    from: config.smtp.user,
+                    to: to,
+                    subject: subject,
+                    text: message,
+                    html: `<p>${message}</p>`,
+                };
 
-            const info = await this.transporter.sendMail(mailOptions);
+                const info = await this.transporter.sendMail(mailOptions);
 
-            logger.info('Notification email sent', {to, messageId: info.messageId});
-            return info;
-        }
-        catch (error) {
-            logger.error('Error sending notification email', {to, error});
-            throw error;
-        }
+                logger.info('Notification email sent', {to, messageId: info.messageId});
+                return info;
+            }
+            catch (error) {
+                logger.error('Error sending notification email', {to, error});
+                throw error;
+            }
+        })
     }
 }
 

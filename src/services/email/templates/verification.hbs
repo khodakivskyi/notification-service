@@ -1,0 +1,64 @@
+<! DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+        . container {
+            max-width:  600px;
+            margin:  40px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius:  8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333333;
+            margin-bottom: 20px;
+        }
+        p {
+            color: #666666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        . button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color:  #ffffff ! important;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .footer {
+            margin-top: 30px;
+            font-size: 12px;
+            color: #999999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Welcome, {{username}}!</h1>
+
+    <p>Thank you for signing up. Please verify your email address to get started.</p>
+
+    <a href="{{verificationLink}}" class="button">Verify Email</a>
+
+    <p>Or copy and paste this link into your browser:</p>
+    <p style="word-break: break-all; color: #4CAF50;">{{verificationLink}}</p>
+
+    <div class="footer">
+        <p>If you didn't create an account, you can safely ignore this email.</p>
+        <p>&copy; 2026 Notification Service. All rights reserved.</p>
+    </div>
+</div>
+</body>
+</html>

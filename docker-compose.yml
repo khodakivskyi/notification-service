@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # ========================================
+  # Node.js app
+  # ========================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      LOG_LEVEL: info
+
+      # SMTP options
+      SMTP_HOST: ${SMTP_HOST}
+      SMTP_PORT: ${SMTP_PORT}
+      SMTP_USER: ${SMTP_USER}
+      SMTP_PASS: ${SMTP_PASS}
+
+      #DATABASE_URL:  postgresql://postgres:postgres@postgres:5432/notifications
+
+      #RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
+    depends_on:
+      - postgres
+      - rabbitmq
+    volumes:
+      - ./logs:/app/logs
+    restart: unless-stopped
+    networks:
+      - notification-network
+
+  # ========================================
+  # PostgreSQL
+  # ========================================
+  postgres:
+    image:  postgres:15-alpine
+    container_name: notification-db
+    environment:
+      POSTGRES_DB: notifications
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - notification-network
+
+  # ========================================
+  # RabbitMQ
+  # ========================================
+  rabbitmq:
+    image:  rabbitmq:3-management-alpine
+    container_name: notification-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin
+    ports:
+      - "5672:5672"   # AMQP
+      - "15672:15672" # Web view (http://localhost:15672)
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - notification-network
+
+# ========================================
+# Volumes
+# ========================================
+volumes:
+  postgres_data:
+  rabbitmq_data:
+
+# ========================================
+# Networks
+# ========================================
+networks:
+  notification-network:
+    driver: bridge

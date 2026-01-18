@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const logger = require('./logger');
 const joi = require('joi');
 
@@ -9,12 +11,12 @@ const envSchema = joi.object({
 
     PORT: joi.number().default(3000),
 
+    DATABASE_URL: joi.string().uri().required(),
+
     SMTP_HOST:  joi.string().required(),
     SMTP_PORT: joi.number().required(),
     SMTP_USER: joi.string().email().required(),
     SMTP_PASS: joi.string().required(),
-
-    //DATABASE_URL: joi.string().uri().required(),
 
     LOG_LEVEL: joi.string()
         .valid('error', 'warn', 'info', 'debug')
@@ -35,6 +37,10 @@ module.exports = {
 
     server: {
         port: env.PORT,
+    },
+
+    database: {
+        url: env.DATABASE_URL,
     },
 
     smtp: {

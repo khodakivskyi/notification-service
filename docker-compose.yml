@@ -1,65 +1,68 @@
 version: '3.8'
 
 services:
-  # ========================================
-  # Node.js app
-  # ========================================
+  # ============================================
+  # PostgreSQL Database
+  # ============================================
+  db:
+    image: postgres:15-alpine
+    container_name: notification-db
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-notifications}
+    ports:
+      - "${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
+    networks:
+      - notification-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-notifications}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ============================================
+  # Notification Service
+  # ============================================
   app:
     build:
       context: .
       dockerfile: Dockerfile
     container_name: notification-service
-    ports:
-      - "3001:3001"
     environment:
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
-      LOG_LEVEL: ${LOG_LEVEL:-info}
-
-      # SMTP options
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-
-      DATABASE_URL: ${DATABASE_URL}
-
-    depends_on:
-      - postgres
+      - NODE_ENV=${NODE_ENV:-development}
+      - PORT=${PORT:-3001}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - DATABASE_URL=${DATABASE_URL}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USER=${SMTP_USER}
+      - SMTP_PASS=${SMTP_PASS}
+    ports:
+      - "${APP_PORT:-3001}:3001"
     volumes:
       - ./logs:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - notification-network
     restart: unless-stopped
-    networks:
-      - notification-network
 
-  # ========================================
-  # PostgreSQL
-  # ========================================
-  postgres:
-    image:  postgres:15-alpine
-    container_name: notification-db
-    environment:
-      POSTGRES_DB: ${POSTGRES_DB}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./migrations:/docker-entrypoint-initdb.d
-    networks:
-      - notification-network
-
-# ========================================
+# ============================================
 # Volumes
-# ========================================
+# ============================================
 volumes:
-  postgres_data:
+  postgres-data:
+    driver: local
 
-# ========================================
+# ============================================
 # Networks
-# ========================================
+# ============================================
 networks:
   notification-network:
     driver: bridge

@@ -10,9 +10,10 @@
  * @property {string|null} errorMessage - Error message if status is 'failed'
  * @property {number} retryCount - Number of retry attempts
  * @property {Object} metadata - Additional metadata (JSON object)
- * @property {Date} createdAt - Creation timestamp
- * @property {Date} updatedAt - Last update timestamp
- * @property {Date|null} sentAt - Sent timestamp (null if not sent yet)
+ * @property {string|Date} createdAt - Creation timestamp (ISO string from DB, can be converted to Date)
+ * @property {string|Date} updatedAt - Last update timestamp (ISO string from DB, can be converted to Date)
+ * @property {string|Date|null} sentAt - Sent timestamp (ISO string from DB or null if not sent yet)
+ * @note Database returns timestamps as ISO strings. Convert to Date if needed: new Date(notification.createdAt)
  */
 
 /**

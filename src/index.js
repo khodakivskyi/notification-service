@@ -1,5 +1,3 @@
-require('dotenv').config();
-
 const app = require('./app');
 const config = require('./config/env');
 const logger = require('./config/logger');
@@ -7,7 +5,7 @@ const logger = require('./config/logger');
 const server = app.listen(config.server.port, () => {
     logger.info('🚀 Notification service started', {
         port: config.server.port,
-        env: config.server.env
+        env: config.env
     });
 });
 

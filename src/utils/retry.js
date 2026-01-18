@@ -27,7 +27,7 @@ async function withRetry(fn, options = {}) {
             }
             catch (error) {
                 // If it's a fatal error, do not retry
-                if (error. responseCode >= 400 && error.responseCode < 500) {
+                if (error.responseCode >= 400 && error.responseCode < 500) {
                     logger.error('Client error, not retrying', { error: error.message });
                     bail(error);
                     return;

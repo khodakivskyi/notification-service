@@ -54,7 +54,8 @@ router.post('/send', async (req, res, next) => {
     }
 });
 
-/** * GET /api/notifications/:id
+/**
+ * GET /api/notifications/:id
  * Get notification by ID
  */
 router.get('/:id', async (req, res, next) => {

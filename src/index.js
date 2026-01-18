@@ -1,6 +1,7 @@
 const app = require('./app');
 const config = require('./config/env');
 const logger = require('./config/logger');
+const db = require('./config/database');
 
 const server = app.listen(config.server.port, () => {
     logger.info('🚀 Notification service started', {
@@ -13,10 +14,17 @@ const server = app.listen(config.server.port, () => {
 process.on('SIGTERM', shutdown);
 process.on('SIGINT', shutdown);
 
-function shutdown() {
+async function shutdown() {
     logger.info('🔻 Shutting down notification service...');
 
-    server.close(() => {
+    server.close(async () => {
+        try {
+            await db.close()
+            logger.info('✅ Database pool closed');
+        } catch (error) {
+            logger.error('Error closing database pool', {error});
+        }
+
         logger.info('✅ HTTP server closed');
         process.exit(0);
     });

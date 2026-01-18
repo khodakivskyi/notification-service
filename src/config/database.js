@@ -88,6 +88,7 @@ async function getClient() {
             const duration = Date.now() - start;
 
             logger.debug('Client query executed', { duration:  `${duration}ms` });
+            return result;
         }
         catch (error) {
             logger.error('Client query error', { error: error.message });

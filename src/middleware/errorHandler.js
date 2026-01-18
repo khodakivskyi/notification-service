@@ -1,4 +1,5 @@
 const logger = require('../config/logger');
+const config = require('../config/env');
 
 /**
  * Centralized error handling
@@ -18,7 +19,7 @@ function errorHandler(error, req, res, next) {
     res.status(statusCode).json({
         error: {
             message: error.message || 'Internal Server Error',
-            ...(process.env.NODE_ENV === 'development' && { stack: error.stack }),
+            ...(config.env === 'development' && { stack: error.stack }),
         },
     });
 }

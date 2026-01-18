@@ -9,7 +9,7 @@ router.get('/health', async (req, res) => {
     res.status(200).json({
         status: "OK",
         timestamp: new Date().toISOString()
-    })
+    });
 });
 
 // GET /ready
@@ -26,7 +26,7 @@ router.get('/ready', async (req, res) => {
         status: allHealthy ? "READY" : "NOT_READY",
         checks: checks,
     });
-})
+});
 
 async function checkSmtp() {
     try{

@@ -6,6 +6,7 @@ const Handlebars = require('handlebars');
 const path = require('path');
 const {withRetry} = require('../../utils/retry');
 const notificationRepository = require('../../repositories/notificationRepository');
+const {ANONYMOUS_USER_ID} = require('../../constants');
 
 /**
  * @typedef {import('../../types/notification').Notification} Notification
@@ -60,7 +61,7 @@ class EmailService {
     async sendVerificationEmail(to, username, verificationLink, userId = null) {
         // create notification record in db ('pending' status)
         const notification = await notificationRepository.create({
-            userId:  userId || '00000000-0000-0000-0000-000000000000',
+            userId: userId || ANONYMOUS_USER_ID,
             type: 'email',
             channel: to,
             subject: '✉️ Verify your email address',
@@ -108,7 +109,7 @@ class EmailService {
     async sendNotification(to, subject, message, userId = null) {
         // create notification record in db ('pending' status)
         const notification = await notificationRepository.create({
-            userId: userId || '00000000-0000-0000-0000-000000000000',
+            userId: userId || ANONYMOUS_USER_ID,
             type: 'email',
             channel: to,
             subject:  subject,

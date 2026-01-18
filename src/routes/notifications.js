@@ -4,7 +4,16 @@ const emailService = require('../services/email/emailService');
 
 /**
  * POST /api/notifications/send-verification
- * Body: { "email": "user@example.com", "username":  "John", "verificationLink": "https://..." }
+ * Send verification email to user
+ * @route POST /api/notifications/send-verification
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.email - Recipient email address
+ * @param {string} req.body.username - User's username
+ * @param {string} req.body.verificationLink - Email verification link URL
+ * @param {string} [req.body.userId] - Optional user UUID
+ * @returns {Promise<Object>} 200 - Success response
+ * @returns {Promise<Object>} 400 - Missing required fields
+ * @returns {Promise<Object>} 500 - Server error
  */
 router.post('/send-verification', async (req, res, next) => {
     try{
@@ -30,7 +39,16 @@ router.post('/send-verification', async (req, res, next) => {
 
 /**
  * POST /api/notifications/send
- * Body: { "email":  "user@example.com", "subject": "Hello", "message": "..." }
+ * Send notification email to user
+ * @route POST /api/notifications/send
+ * @param {Object} req.body - Request body
+ * @param {string} req.body.email - Recipient email address
+ * @param {string} req.body.subject - Email subject
+ * @param {string} req.body.message - Email message content
+ * @param {string} [req.body.userId] - Optional user UUID
+ * @returns {Promise<Object>} 200 - Success response
+ * @returns {Promise<Object>} 400 - Missing required fields
+ * @returns {Promise<Object>} 500 - Server error
  */
 router.post('/send', async (req, res, next) => {
     try {
@@ -57,6 +75,12 @@ router.post('/send', async (req, res, next) => {
 /**
  * GET /api/notifications/:id
  * Get notification by ID
+ * @route GET /api/notifications/:id
+ * @param {Object} req.params - Route parameters
+ * @param {string} req.params.id - Notification UUID
+ * @returns {Promise<Object>} 200 - Notification data
+ * @returns {Promise<Object>} 404 - Notification not found
+ * @returns {Promise<Object>} 500 - Server error
  */
 router.get('/:id', async (req, res, next) => {
     try{
@@ -76,7 +100,12 @@ router.get('/:id', async (req, res, next) => {
 
 /**
  * GET /api/notifications/user/:userId/stats
- * Get stats for a user
+ * Get notification statistics for a user
+ * @route GET /api/notifications/user/:userId/stats
+ * @param {Object} req.params - Route parameters
+ * @param {string} req.params.userId - User UUID
+ * @returns {Promise<Object>} 200 - Statistics data (array of stats by type and status)
+ * @returns {Promise<Object>} 500 - Server error
  */
 router.get('/user/:userId/stats', async (req, res, next) => {
     try {

@@ -19,7 +19,7 @@ async function shutdown() {
 
     server.close(async () => {
         try {
-            await db.close()
+            await db.close();
             logger.info('✅ Database pool closed');
         } catch (error) {
             logger.error('Error closing database pool', {error});

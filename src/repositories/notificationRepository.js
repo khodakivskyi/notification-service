@@ -191,7 +191,7 @@ class NotificationRepository {
             const result = await db.query(
                 `DELETE
                  FROM notifications
-                 WHERE "createdAt" < NOW() - INTERVAL '$1 days'`,
+                 WHERE "createdAt" < NOW() - MAKE_INTERVAL(days => $1)`,
                 [days]
             );
 

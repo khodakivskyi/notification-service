@@ -21,7 +21,7 @@ create table if not exists notifications (
 
     "createdAt" timestamptz not null default now(),
     "updatedAt" timestamptz not null default now(),
-    "sentAt" timestamptz,
+    "sentAt" timestamptz
 );
 
 -- ========================================

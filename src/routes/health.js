@@ -3,7 +3,7 @@ const router = express.Router();
 const nodemailer = require('nodemailer');
 const logger = require('../config/logger');
 const config = require('../config/env');
-const {database} = require("../config/env");
+const db = require("../config/database");
 
 // GET /health
 router.get('/health', async (req, res) => {
@@ -17,7 +17,7 @@ router.get('/health', async (req, res) => {
 router.get('/ready', async (req, res) => {
     const checks = {
         smtp: await checkSmtp(),
-        database: await database.checkConnection(),
+        database: await db.checkConnection(),
     };
 
     const allHealthy = Object.values(checks).every(status => status === true);

@@ -12,9 +12,9 @@ services:
     ports:
       - "3001:3001"
     environment:
-      NODE_ENV: production
-      PORT: 3001
-      LOG_LEVEL: info
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
 
       # SMTP options
       SMTP_HOST: ${SMTP_HOST}
@@ -22,12 +22,10 @@ services:
       SMTP_USER: ${SMTP_USER}
       SMTP_PASS: ${SMTP_PASS}
 
-      #DATABASE_URL:  postgresql://postgres:postgres@postgres:5432/notifications
+      DATABASE_URL: ${DATABASE_URL}
 
-      #RABBITMQ_URL: amqp://admin:admin@rabbitmq:5672
     depends_on:
       - postgres
-      - rabbitmq
     volumes:
       - ./logs:/app/logs
     restart: unless-stopped
@@ -41,9 +39,10 @@ services:
     image:  postgres:15-alpine
     container_name: notification-db
     environment:
-      POSTGRES_DB: notifications
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
     ports:
       - "5432:5432"
     volumes:
@@ -52,29 +51,11 @@ services:
     networks:
       - notification-network
 
-  # ========================================
-  # RabbitMQ
-  # ========================================
-  rabbitmq:
-    image:  rabbitmq:3-management-alpine
-    container_name: notification-rabbitmq
-    environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin
-    ports:
-      - "5672:5672"   # AMQP
-      - "15672:15672" # Web view (http://localhost:15672)
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-    networks:
-      - notification-network
-
 # ========================================
 # Volumes
 # ========================================
 volumes:
   postgres_data:
-  rabbitmq_data:
 
 # ========================================
 # Networks

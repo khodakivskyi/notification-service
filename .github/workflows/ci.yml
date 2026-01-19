@@ -30,12 +30,12 @@ jobs:
         docker run -d --name test \
           -e NODE_ENV=test \
           -e PORT=3001 \
-          -e DATABASE_URL=postgresql://test:test@localhost: 5432/test \
+          -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
           -e SMTP_HOST=smtp.example.com \
           -e SMTP_PORT=587 \
           -e SMTP_USER=test@example.com \
           -e SMTP_PASS=testpass \
-          notification-service: test
+          notification-service:test
         
         sleep 8
         docker exec test curl -f http://localhost:3001/health || exit 1

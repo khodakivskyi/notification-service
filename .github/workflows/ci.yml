@@ -35,9 +35,10 @@ jobs:
           -e SMTP_PORT=587 \
           -e SMTP_USER=test@example.com \
           -e SMTP_PASS=testpass \
+          -p 3001:3001 \
           notification-service:test
-        
+
         sleep 8
-        docker exec test curl -f http://localhost:3001/health || exit 1
+        curl -f http://localhost:3001/health || exit 1
         docker stop test
         echo "✅ Health check passed!"

@@ -30,6 +30,7 @@ jobs:
         docker run -d --name test \
           -e NODE_ENV=test \
           -e PORT=3001 \
+          -e LOG_LEVEL=info \
           -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
           -e SMTP_HOST=smtp.example.com \
           -e SMTP_PORT=587 \
@@ -38,7 +39,17 @@ jobs:
           -p 3001:3001 \
           notification-service:test
 
-        sleep 8
-        curl -f http://localhost:3001/health || exit 1
+        # Wait for container to start
+        sleep 10
+        
+        # Check container logs for debugging
+        echo "Container logs:"
+        docker logs test || true
+        
+        # Test health endpoint
+        curl -f http://localhost:3001/api/health || (docker logs test && exit 1)
+        
+        # Cleanup
         docker stop test
+        docker rm test || true
         echo "✅ Health check passed!"

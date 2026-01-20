@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const emailService = require('../services/email/emailService');
+const emailQueue = require('../queues/emailQueue');
 
 /**
  * POST /api/notifications/send-verification
@@ -25,11 +26,16 @@ router.post('/send-verification', async (req, res, next) => {
             });
         }
 
-        await emailService.sendVerificationEmail(email, username, verificationLink, userId);
+        await emailQueue.addVerificationEmail({
+            to: email,
+            username,
+            verificationLink,
+            userId,
+        });
 
-        res.status(200).json({
+        res.status(202).json({
             success: true,
-            message: 'Verification email sent'
+            message: 'Verification email queued for delivery',
         });
     }
     catch (error) {
@@ -60,11 +66,16 @@ router.post('/send', async (req, res, next) => {
             });
         }
 
-        await emailService.sendNotification(email, subject, message, userId);
+        await emailQueue.addNotificationEmail({
+            to: email,
+            subject,
+            message,
+            userId,
+        });
 
-        res.status(200).json({
+        res.status(202).json({
             success: true,
-            message: 'Notification sent'
+            message:  'Notification queued for delivery',
         });
     }
     catch (error) {
@@ -119,5 +130,21 @@ router.get('/user/:userId/stats', async (req, res, next) => {
     }
 });
 
+/**
+ * GET /api/notifications/queue/stats
+ * Get email queue statistics
+ *
+ * @route   GET /api/notifications/queue/stats
+ * @returns {Promise<Object>} 200 - Queue statistics data
+ * @returns {Promise<Object>} 500 - Server error
+ */
+router.get('/queue/stats', async (req,res, next) => {
+    try{
+        const stats = await emailQueue.getStats();
+        res.status(200).json({success: true, data: stats});
+    } catch (error) {
+        next(error);
+    }
+});
 
 module.exports = router;

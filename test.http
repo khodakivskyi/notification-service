@@ -1,0 +1,9 @@
+### Send verification email
+POST http://localhost:3001/api/notifications/send-verification
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "username": "TestUser",
+  "verificationLink": "https://example.com/verify/123"
+}

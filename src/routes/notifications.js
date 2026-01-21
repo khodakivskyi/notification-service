@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const emailService = require('../services/email/emailService');
 const emailQueue = require('../queues/emailQueue');
+const notificationRepository = require('../repositories/notificationRepository')
+const {ANONYMOUS_USER_ID} = require("../constants");
 
 /**
  * POST /api/notifications/send-verification
@@ -12,13 +14,15 @@ const emailQueue = require('../queues/emailQueue');
  * @param {string} req.body.username - User's username
  * @param {string} req.body.verificationLink - Email verification link URL
  * @param {string} [req.body.userId] - Optional user UUID
+ * @param {string} [req.body.subject] - Optional letter subject
+ * @param {string} [req.body.callbackUrl] - Optional callback url
  * @returns {Promise<Object>} 200 - Success response
  * @returns {Promise<Object>} 400 - Missing required fields
  * @returns {Promise<Object>} 500 - Server error
  */
 router.post('/send-verification', async (req, res, next) => {
     try{
-        const {email, username, verificationLink, userId} = req.body;
+        const {email, username, verificationLink, userId, subject, callbackUrl} = req.body;
 
         if (!email || !username || !verificationLink) {
             return res.status(400).json({
@@ -26,16 +30,34 @@ router.post('/send-verification', async (req, res, next) => {
             });
         }
 
+        //TODO: status queued
+        const notification = await notificationRepository.create({
+            userId: userId || ANONYMOUS_USER_ID,
+            type: 'email',
+            channel: email,
+            subject: subject || 'Verify your email address',
+            content: `Verification link: ${verificationLink}`,
+            metadata: {
+                username,
+                verificationLink,
+                callbackUrl: callbackUrl || null
+            },
+        });
+
         await emailQueue.addVerificationEmail({
             to: email,
             username,
             verificationLink,
             userId,
+            notificationId: notification.id,
+            callbackUrl: callbackUrl || null,
         });
 
         res.status(202).json({
             success: true,
             message: 'Verification email queued for delivery',
+            notificationId: notification.id,
+            statusUrl: `/api/notifications/${notification.id}`,
         });
     }
     catch (error) {
@@ -52,13 +74,14 @@ router.post('/send-verification', async (req, res, next) => {
  * @param {string} req.body.subject - Email subject
  * @param {string} req.body.message - Email message content
  * @param {string} [req.body.userId] - Optional user UUID
+ * @param {string} [req.body.callbackUrl] - Optional callback url
  * @returns {Promise<Object>} 200 - Success response
  * @returns {Promise<Object>} 400 - Missing required fields
  * @returns {Promise<Object>} 500 - Server error
  */
 router.post('/send', async (req, res, next) => {
     try {
-        const {email, subject, message, userId} = req.body;
+        const {email, subject, message, userId, callbackUrl} = req.body;
 
         if (!email || !subject || !message) {
             return res.status(400).json({
@@ -66,16 +89,31 @@ router.post('/send', async (req, res, next) => {
             });
         }
 
+        const notification = await notificationRepository.create({
+            userId: userId || ANONYMOUS_USER_ID,
+            type: 'email',
+            channel: email,
+            subject: subject,
+            content: message,
+            metadata: {
+                callbackUrl: callbackUrl || null
+            }
+        });
+
         await emailQueue.addNotificationEmail({
             to: email,
             subject,
             message,
             userId,
+            notificationId: notification.id,
+            callbackUrl: callbackUrl || null,
         });
 
         res.status(202).json({
             success: true,
-            message:  'Notification queued for delivery',
+            message: 'Notification queued for delivery',
+            notificationId: notification.id,
+            statusUrl: `/api/notifications/${notification.id}`,
         });
     }
     catch (error) {

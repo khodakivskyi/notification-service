@@ -6,7 +6,6 @@ const Handlebars = require('handlebars');
 const path = require('path');
 const {withRetry} = require('../../utils/retry');
 const notificationRepository = require('../../repositories/notificationRepository');
-const {ANONYMOUS_USER_ID} = require('../../constants');
 
 /**
  * @typedef {import('../../types/notification').Notification} Notification
@@ -56,18 +55,17 @@ class EmailService {
      * @param {string} to - Recipient email
      * @param {string} username - Username
      * @param {string} verificationLink - Verification link
-     * @param {string|null} userId - User ID
+     * @param {string} notificationId - Notification ID
      */
-    async sendVerificationEmail(to, username, verificationLink, userId = null) {
-        // create notification record in db ('pending' status)
-        const notification = await notificationRepository.create({
-            userId: userId || ANONYMOUS_USER_ID,
-            type: 'email',
-            channel: to,
-            subject: '✉️ Verify your email address',
-            content: `Verification link: ${verificationLink}`,
-            metadata: { username, verificationLink },
-        });
+    async sendVerificationEmail(to, username, verificationLink, notificationId) {
+        let notification;
+
+        if (notificationId) {
+            notification = await notificationRepository.getById(notificationId);
+            if (!notification) {
+                throw new Error(`Notification not found`);
+            }
+        }
 
         return withRetry(async () => {
             try {
@@ -86,12 +84,13 @@ class EmailService {
                 const info = await this.transporter.sendMail(mailOptions);
 
                 await notificationRepository.markAsSent(notification.id);
-
+                notification = await notificationRepository.getById(notificationId);
                 logger.info('Verification email sent', {to, messageId: info.messageId});
 
-                return info;
+                return {info, notification};
             } catch (error) {
                 await notificationRepository.markAsFailed(notification.id, error.message);
+                notification = await notificationRepository.getById(notificationId);
                 logger.error('Error sending verification email', {to, error});
                 throw error;
             }
@@ -104,17 +103,17 @@ class EmailService {
      * @param {string} to - Recipient email
      * @param {string} subject - Subject
      * @param {string} message - message
-     * @param {string|null} userId - User ID
+     * @param {string} notificationId - Notification ID
      */
-    async sendNotification(to, subject, message, userId = null) {
-        // create notification record in db ('pending' status)
-        const notification = await notificationRepository.create({
-            userId: userId || ANONYMOUS_USER_ID,
-            type: 'email',
-            channel: to,
-            subject:  subject,
-            content: message,
-        });
+    async sendNotification(to, subject, message, notificationId) {
+        let notification;
+
+        if (notificationId) {
+            notification = await notificationRepository.getById(notificationId);
+            if (!notification) {
+                throw new Error(`Notification not found`);
+            }
+        }
 
         return withRetry(async () => {
             try {
@@ -129,12 +128,12 @@ class EmailService {
                 const info = await this.transporter.sendMail(mailOptions);
 
                 await notificationRepository.markAsSent(notification.id);
-
+                notification = await notificationRepository.getById(notificationId);
                 logger.info('Notification email sent', {to, messageId: info.messageId});
-                return info;
-            }
-            catch (error) {
+                return {info, notification};
+            } catch (error) {
                 await notificationRepository.markAsFailed(notification.id, error.message);
+                notification = await notificationRepository.getById(notificationId);
                 logger.error('Error sending notification email', {to, error});
                 throw error;
             }
@@ -168,7 +167,7 @@ class EmailService {
      * @param {string} id - User ID
      * @returns {Promise<NotificationStats[]|null>}
      */
-    async getStatsByUserId(id){
+    async getStatsByUserId(id) {
         const stats = await notificationRepository.getStatsByUserId(id);
 
         if (!stats) {

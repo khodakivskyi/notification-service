@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/index.js",
-    "dev:workers": "nodemon src/workers. js",
+    "dev:workers": "nodemon src/workers.js",
     "start": "node src/index.js",
     "start:workers": "node src/workers.js"
   },

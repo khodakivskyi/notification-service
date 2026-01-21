@@ -19,12 +19,21 @@ class EmailWorker {
         }
 
         try {
+            /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
 
-            await channel.assertQueue(this.queuename, {durable: true});
+            await channel.assertQueue(this.queueName, {
+                durable: true,
+                arguments: {
+                    'x-message-ttl': config.rabbitmq.settings.ttl,
+                    'x-max-length': config.rabbitmq.settings.maxLength,
+                }
+            });
             await channel.prefetch(1);
 
             logger.info('🚀 Email worker started', {queue: this.queueName});
+
+            this.isRunning = true;
 
             await channel.consume(
                 this.queueName,

@@ -15,6 +15,7 @@ class EmailQueue {
      */
     async init() {
         try {
+            /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
 
             await channel.assertQueue(this.queueName, {
@@ -37,6 +38,8 @@ class EmailQueue {
      * @param {string} data.to - Recipient email
      * @param {string} data.username - Username
      * @param {string} data.verificationLink - Verification link
+     * @param {string} data.notificationId - Notification ID
+     * @param {string|null} data.callbackUrl - Callback Url
      * @param {string|null} data.userId - User ID
      */
     async addVerificationEmail(data) {
@@ -49,6 +52,8 @@ class EmailQueue {
      * @param {string} data.to - Recipient email
      * @param {string} data.subject - Subject
      * @param {string} data.message - Message
+     * @param {string} data.notificationId - Notification ID
+     * @param {string|null} data.callbackUrl - Callback Url
      * @param {string|null} data.userId - User ID
      */
     async addNotificationEmail(data) {
@@ -62,6 +67,7 @@ class EmailQueue {
      */
     async addJob(type, data) {
         try {
+            /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
 
             const job = {
@@ -98,6 +104,7 @@ class EmailQueue {
      */
     async getStats() {
         try {
+            /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
             const queueInfo = await channel.checkQueue(this.queueName);
             return {

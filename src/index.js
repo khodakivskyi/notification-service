@@ -48,18 +48,6 @@ async function shutdown() {
         process.exit(0);
     });
 
-    server.close(async () => {
-        try {
-            await db.close();
-            logger.info('✅ Database pool closed');
-        } catch (error) {
-            logger.error('Error closing database pool', {error});
-        }
-
-        logger.info('✅ HTTP server closed');
-        process.exit(0);
-    });
-
     // Force shutdown after 10 seconds
     setTimeout(() => {
         logger.error('❌ Forced shutdown after timeout');

@@ -30,7 +30,6 @@ router.post('/send-verification', async (req, res, next) => {
             });
         }
 
-        //TODO: status queued
         const notification = await notificationRepository.create({
             userId: userId || ANONYMOUS_USER_ID,
             type: 'email',

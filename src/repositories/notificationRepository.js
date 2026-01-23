@@ -17,8 +17,8 @@ class NotificationRepository {
         try {
             const result = await db.query(
                 `INSERT INTO notifications
-                     ("userId", "type", channel, subject, content, metadata, status)
-                 VALUES ($1, $2, $3, $4, $5, $6, 'pending') RETURNING *`,
+                     ("userId", "type", channel, subject, content, metadata)
+                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
                 [userId, type, channel, subject, content, metadata]
             );
 
@@ -36,47 +36,38 @@ class NotificationRepository {
     }
 
     /**
-     * Update status to 'sent'
+     * Generic method to update status
      * @param {string} id - Notification ID
+     * @param {number} statusId - Status ID
+     * @param {string|null} errorMessage - Optional error message
      * @returns {Promise<void>}
      */
-    async markAsSent(id) {
-        try {
+    async updateStatus(id, statusId, errorMessage = null){
+        try{
+            // If status is not FAILED (4), clear error message
+            // If status is FAILED and errorMessage provided, set it
+            const updates = ['"statusId" = $2'];
+            const params = [id, statusId];
+
+            if (statusId === 4 && errorMessage !== null) {
+                updates.push('"errorMessage" = $3');
+                params.push(errorMessage);
+            } else if (statusId !== 4) {
+                // Non-FAILED status - clear error message
+                updates.push('"errorMessage" = NULL');
+            }
+
             await db.query(
                 `UPDATE notifications
-                 SET status = 'sent',
-                     "sentAt" = CURRENT_TIMESTAMP
+                 SET ${updates.join(', ')}
                  WHERE id = $1`,
-                [id]
+                params
             );
 
-            logger.info('Notification marked as sent', {id});
-        } catch (error) {
-            logger.error("Error marking notification as sent", {id, error: error.message});
-            throw error;
+            logger.info("Notification status updated", {id, statusId, hasError: errorMessage !== null});
         }
-    }
-
-    /**
-     * Update status to 'failed'
-     * @param {string} id - Notification ID
-     * @param {string} errorMessage - Error message
-     * @returns {Promise<void>}
-     */
-    async markAsFailed(id, errorMessage) {
-        try {
-            await db.query(
-                `UPDATE notifications
-                 SET status = 'failed',
-                     "errorMessage" = $2,
-                     "retryCount" = "retryCount" + 1
-                 WHERE id = $1`,
-                [id, errorMessage]
-            );
-
-            logger.info('Notification marked as failed', {id, errorMessage});
-        } catch (error) {
-            logger.error("Error marking notification as failed", {id, error: error.message});
+        catch(error){
+            logger.error("Error updating notification status", {id, statusId, error: error.message});
             throw error;
         }
     }
@@ -108,16 +99,17 @@ class NotificationRepository {
     }
 
     /**
-     * Get message by ID
+     * Get message by ID with status name
      * @param {string} id - Notification ID
      * @returns {Promise<Notification|null>} - Notification or null if not found
      */
     async getById(id) {
         try {
             const result = await db.query(
-                `SELECT *
-                 FROM notifications
-                 WHERE id = $1`,
+                `SELECT n.*, ns.name as status
+                 FROM notifications n
+                          LEFT JOIN notification_statuses ns ON n."statusId" = ns.id
+                 WHERE n.id = $1`,
                 [id]
             );
 
@@ -139,12 +131,13 @@ class NotificationRepository {
     async getStatsByUserId(userId) {
         try {
             const result = await db.query(
-                `SELECT "type",
-                        status,
+                `SELECT n."type",
+                        ns.name as status,
                         COUNT(*) as count
-                 FROM notifications
-                 WHERE "userId" = $1
-                 GROUP BY "type", status`,
+                 FROM notifications n
+                 LEFT JOIN notification_statuses ns ON n."statusId" = ns.id
+                 WHERE n."userId" = $1
+                 GROUP BY n."type", ns.name`,
                 [userId]
             );
 
@@ -159,17 +152,18 @@ class NotificationRepository {
     }
 
     /**
-     * Get message with status 'pending' for retry
+     * Get message with status 'queued' or 'retrying' for retry
      * @param {number} [limit=100] - Maximum number of records
      * @returns {Promise<Notification[]>} - Array of pending notifications
      */
     async getPendingNotifications(limit = 100) {
         try {
             const result = await db.query(
-                `SELECT *
-                 FROM notifications
-                 WHERE status = 'pending'
-                 ORDER BY "createdAt" ASC
+                `SELECT n.*
+                 FROM notifications n
+                 LEFT JOIN notification_statuses ns ON n."statusId" = ns.id
+                 WHERE ns.name IN ('queued', 'retrying')
+                 ORDER BY n."createdAt" ASC
                      LIMIT $1`,
                 [limit]
             );

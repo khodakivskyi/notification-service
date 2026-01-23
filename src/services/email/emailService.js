@@ -6,6 +6,7 @@ const Handlebars = require('handlebars');
 const path = require('path');
 const {withRetry} = require('../../utils/retry');
 const notificationRepository = require('../../repositories/notificationRepository');
+const {NOTIFICATION_STATUSES, isValidStatusId} = require('../../constants/index');
 
 /**
  * @typedef {import('../../types/notification').Notification} Notification
@@ -61,7 +62,7 @@ class EmailService {
         let notification;
 
         if (notificationId) {
-            notification = await notificationRepository.getById(notificationId);
+            notification = await this.getById(notificationId);
             if (!notification) {
                 throw new Error(`Notification not found`);
             }
@@ -83,14 +84,14 @@ class EmailService {
 
                 const info = await this.transporter.sendMail(mailOptions);
 
-                await notificationRepository.markAsSent(notification.id);
-                notification = await notificationRepository.getById(notificationId);
+                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.SENT);
+                notification = await this.getById(notificationId);
                 logger.info('Verification email sent', {to, messageId: info.messageId});
 
                 return {info, notification};
             } catch (error) {
-                await notificationRepository.markAsFailed(notification.id, error.message);
-                notification = await notificationRepository.getById(notificationId);
+                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.FAILED, error.message);
+                notification = await this.getById(notificationId);
                 logger.error('Error sending verification email', {to, error});
                 throw error;
             }
@@ -109,7 +110,7 @@ class EmailService {
         let notification;
 
         if (notificationId) {
-            notification = await notificationRepository.getById(notificationId);
+            notification = await this.getById(notificationId);
             if (!notification) {
                 throw new Error(`Notification not found`);
             }
@@ -127,17 +128,25 @@ class EmailService {
 
                 const info = await this.transporter.sendMail(mailOptions);
 
-                await notificationRepository.markAsSent(notification.id);
-                notification = await notificationRepository.getById(notificationId);
+                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.SENT);
+                notification = await this.getById(notificationId);
                 logger.info('Notification email sent', {to, messageId: info.messageId});
                 return {info, notification};
             } catch (error) {
-                await notificationRepository.markAsFailed(notification.id, error.message);
-                notification = await notificationRepository.getById(notificationId);
+                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.FAILED, error.message);
+                notification = await this.getById(notificationId);
                 logger.error('Error sending notification email', {to, error});
                 throw error;
             }
         })
+    }
+
+    async updateStatus(id, statusId, errorMessage = null){
+        if(!isValidStatusId(statusId))
+            //throw new NotFoundError('Status not found');
+            return null;
+
+        await notificationRepository.updateStatus(id, statusId, errorMessage);
     }
 
     /**

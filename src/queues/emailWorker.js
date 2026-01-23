@@ -2,6 +2,7 @@ const rabbitMQConnection = require('../config/rabbitmq');
 const emailService = require('../services/email/emailService');
 const config = require('../config/env');
 const logger = require('../config/logger');
+const {NOTIFICATION_STATUSES} = require('../constants/index');
 
 class EmailWorker {
     constructor() {
@@ -64,6 +65,8 @@ class EmailWorker {
                 type: job.type,
                 timestamp: job.timestamp,
             });
+
+            await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
 
             let result;
 
@@ -135,6 +138,8 @@ class EmailWorker {
                     maxRetries,
                 });
 
+                await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
+
                 job.retries = currentRetries + 1;
 
                 channel.sendToQueue(
@@ -150,6 +155,8 @@ class EmailWorker {
                     type: job?.type,
                 });
 
+                await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.FAILED, error.message);
+                
                 //TODO: Dead Letter Queue
                 channel.ack(msg);
             }

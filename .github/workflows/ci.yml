@@ -22,34 +22,69 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Build Docker image
-      run: docker build -t notification-service:test .
-
-    - name: Test Docker container
+    - name: Start services with docker compose
       run: |
-        docker run -d --name test \
-          -e NODE_ENV=test \
-          -e PORT=3001 \
-          -e LOG_LEVEL=info \
-          -e DATABASE_URL=postgresql://test:test@localhost:5432/test \
-          -e SMTP_HOST=smtp.example.com \
-          -e SMTP_PORT=587 \
-          -e SMTP_USER=test@example.com \
-          -e SMTP_PASS=testpass \
-          -p 3001:3001 \
-          notification-service:test
+        # Create test .env file
+        cat > .env.test << EOF
+        NODE_ENV=test
+        PORT=3001
+        LOG_LEVEL=info
+        DB_USER=postgres
+        DB_PASSWORD=postgres
+        DB_NAME=notifications
+        DB_PORT=5432
+        DATABASE_URL=postgresql://postgres:postgres@db:5432/notifications?sslmode=disable
+        SMTP_HOST=smtp.example.com
+        SMTP_PORT=587
+        SMTP_USER=test@example.com
+        SMTP_PASS=testpass
+        RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+        EMAIL_QUEUE_NAME=email_notifications
+        RABBITMQ_DLX_EXCHANGE=notification.dlx
+        EMAIL_DLQ_NAME=email.dlq
+        EMAIL_DLQ_ROUTING_KEY=email.dlq
+        APP_PORT=3001
+        EOF
 
-        # Wait for container to start
-        sleep 10
+        # Start only app service with dependencies (db, rabbitmq)
+        docker compose --env-file .env.test up -d db rabbitmq
         
-        # Check container logs for debugging
-        echo "Container logs:"
-        docker logs test || true
+        # Wait for dependencies to be healthy
+        echo "Waiting for PostgreSQL and RabbitMQ to be ready..."
+        timeout 60 bash -c '
+        until [ "$(docker inspect --format="{{.State.Health.Status}}" notification-db)" = "healthy" ] \
+          && [ "$(docker inspect --format="{{.State.Health.Status}}" notification-rabbitmq)" = "healthy" ];
+        do
+          sleep 2
+        done
+        '
         
-        # Test health endpoint
-        curl -f http://localhost:3001/api/health || (docker logs test && exit 1)
+        # Start app service
+        docker compose --env-file .env.test up -d app
         
-        # Cleanup
-        docker stop test
-        docker rm test || true
-        echo "✅ Health check passed!"
+        # Wait for app to start
+        echo "Waiting for app to start..."
+        sleep 15
+
+    - name: Test health endpoint
+      run: |
+        # Test health endpoint with retries
+        for i in {1..5}; do
+          if curl -f http://localhost:3001/api/health; then
+            echo "✅ Health check passed!"
+            exit 0
+          fi
+          echo "Attempt $i failed, retrying in 3 seconds..."
+          sleep 3
+        done
+        
+        echo "❌ Health check failed after 5 attempts"
+        docker compose --env-file .env.test logs app
+        exit 1
+
+    - name: Cleanup
+      if: always()
+      run: |
+        docker compose --env-file .env.test down -v
+        rm -f .env.test
+        echo "✅ Cleanup completed"

@@ -8,4 +8,5 @@ module.exports = {
     ServiceUnavailableError: require('./ServiceUnavailableError'),
     RateLimitError: require('./RateLimitError'),
     ConflictError: require('./ConflictError'),
+    ForbiddenError: require('./ForbiddenError'),
 };

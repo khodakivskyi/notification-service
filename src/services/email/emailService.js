@@ -7,6 +7,7 @@ const path = require('path');
 const {withRetry} = require('../../utils/retry');
 const notificationRepository = require('../../repositories/notificationRepository');
 const {NOTIFICATION_STATUSES, isValidStatusId} = require('../../constants/index');
+const {NotFoundError, ValidationError, ForbiddenError} = require('../../exceptions');
 
 /**
  * @typedef {import('../../types/notification').Notification} Notification
@@ -59,14 +60,11 @@ class EmailService {
      * @param {string} notificationId - Notification ID
      */
     async sendVerificationEmail(to, username, verificationLink, notificationId) {
-        let notification;
-
-        if (notificationId) {
-            notification = await this.getById(notificationId);
-            if (!notification) {
-                throw new Error(`Notification not found`);
-            }
+        if (!notificationId) {
+            throw new ValidationError('Notification ID is required');
         }
+
+        const notification = await this.getById(notificationId);
 
         return withRetry(async () => {
             try {
@@ -107,14 +105,11 @@ class EmailService {
      * @param {string} notificationId - Notification ID
      */
     async sendNotification(to, subject, message, notificationId) {
-        let notification;
-
-        if (notificationId) {
-            notification = await this.getById(notificationId);
-            if (!notification) {
-                throw new Error(`Notification not found`);
-            }
+        if (!notificationId) {
+            throw new ValidationError('Notification ID is required');
         }
+
+        const notification = await this.getById(notificationId);
 
         return withRetry(async () => {
             try {
@@ -141,10 +136,47 @@ class EmailService {
         })
     }
 
+    /**
+     * Create a new notification record
+     * @param {Object} data - Notification data
+     * @param {string} data.userId - User ID
+     * @param {string} data.type - Notification type
+     * @param {string} data.channel - Delivery channel
+     * @param {string} data.subject - Subject
+     * @param {string} data.content - Content
+     * @param {Object} data.metadata - Metadata
+     * @returns {Promise<Notification>}
+     */
+    async createNotification({userId, type, channel, subject, content, metadata = {}}) {
+        // Validate email format if channel is email
+        if (type === 'email' && channel) {
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (!emailRegex.test(channel)) {
+                throw new ValidationError('Invalid email address format', {field: 'email', value: channel});
+            }
+        }
+
+        return await notificationRepository.create({
+            userId,
+            type,
+            channel,
+            subject,
+            content,
+            metadata
+        });
+    }
+
+    /**
+     * Update notification status
+     * @param {string} id - Notification ID
+     * @param {number} statusId - Status ID
+     * @param {string|null} errorMessage - Optional error message
+     * @returns {Promise<void>}
+     */
     async updateStatus(id, statusId, errorMessage = null){
-        if(!isValidStatusId(statusId))
-            //throw new NotFoundError('Status not found');
-            return null;
+        if(!isValidStatusId(statusId)) {
+            throw new NotFoundError('Status', statusId);
+        }
 
         await notificationRepository.updateStatus(id, statusId, errorMessage);
     }
@@ -153,19 +185,23 @@ class EmailService {
      * Get notification by ID
      * @param {string} id - Notification ID
      * @param {string|null} userId - Optional user ID for access control
-     * @returns {Promise<Notification|null>}
+     * @returns {Promise<Notification>}
+     * @throws {NotFoundError} If notification not found
+     * @throws {ForbiddenError} If user is not authorized to access the notification
      */
     async getById(id, userId = null) {
+        if (!id) {
+            throw new ValidationError('Notification ID is required');
+        }
+
         const notification = await notificationRepository.getById(id);
 
         if (!notification) {
-            //throw new NotFoundError('Notification not found');
-            return null;
+            throw new NotFoundError('Notification', id);
         }
 
         if (userId && notification.userId !== userId) {
-            //throw new ForbiddenError('Access denied');
-            return null;
+            throw new ForbiddenError ();
         }
 
         return notification;
@@ -174,17 +210,15 @@ class EmailService {
     /**
      * Get statistics for user
      * @param {string} id - User ID
-     * @returns {Promise<NotificationStats[]|null>}
+     * @returns {Promise<NotificationStats[]>}
      */
     async getStatsByUserId(id) {
-        const stats = await notificationRepository.getStatsByUserId(id);
-
-        if (!stats) {
-            //throw new NotFoundError('Notification not found');
-            return null;
+        if (!id) {
+            throw new ValidationError('User ID is required');
         }
 
-        return stats;
+        const stats = await notificationRepository.getStatsByUserId(id);
+        return stats || [];
     }
 }
 

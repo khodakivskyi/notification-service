@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const emailService = require('../services/email/emailService');
 const emailQueue = require('../queues/emailQueue');
-const notificationRepository = require('../repositories/notificationRepository')
 const {ANONYMOUS_USER_ID} = require("../constants");
+const {ValidationError} = require('../exceptions');
 
 /**
  * POST /api/notifications/send-verification
@@ -25,12 +25,16 @@ router.post('/send-verification', async (req, res, next) => {
         const {email, username, verificationLink, userId, subject, callbackUrl} = req.body;
 
         if (!email || !username || !verificationLink) {
-            return res.status(400).json({
-                error: 'Missing required fields:  email, username, verificationLink'
+            throw new ValidationError('Missing required fields: email, username, verificationLink', {
+                missing: {
+                    email: !email,
+                    username: !username,
+                    verificationLink: !verificationLink
+                }
             });
         }
 
-        const notification = await notificationRepository.create({
+        const notification = await emailService.createNotification({
             userId: userId || ANONYMOUS_USER_ID,
             type: 'email',
             channel: email,
@@ -83,12 +87,16 @@ router.post('/send', async (req, res, next) => {
         const {email, subject, message, userId, callbackUrl} = req.body;
 
         if (!email || !subject || !message) {
-            return res.status(400).json({
-                error: 'Missing required fields: email, subject, message'
+            throw new ValidationError('Missing required fields: email, subject, message', {
+                missing: {
+                    email: !email,
+                    subject: !subject,
+                    message: !message
+                }
             });
         }
 
-        const notification = await notificationRepository.create({
+        const notification = await emailService.createNotification({
             userId: userId || ANONYMOUS_USER_ID,
             type: 'email',
             channel: email,
@@ -134,10 +142,6 @@ router.get('/:id', async (req, res, next) => {
     try{
         const id = req.params.id;
         const notification = await emailService.getById(id);
-
-        if (!notification) {
-            return res.status(404).json({error: 'Notification not found'});
-        }
 
         res.status(200).json({success: true, data: notification});
     }

@@ -3,6 +3,7 @@ const emailService = require('../services/email/emailService');
 const config = require('../config/env');
 const logger = require('../config/logger');
 const {NOTIFICATION_STATUSES} = require('../constants/index');
+const {NotFoundError} = require('../exceptions');
 
 class EmailWorker {
     constructor() {
@@ -85,7 +86,7 @@ class EmailWorker {
                     job.data.notificationId
                 );
             } else {
-                throw new Error(`Unknown job type: ${job.type}`);
+                throw new NotFoundError(`Unknown job type: ${job.type}`);
             }
 
             // Receive notification for callback

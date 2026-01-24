@@ -3,7 +3,7 @@ const router = express.Router();
 const emailService = require('../services/email/emailService');
 const emailQueue = require('../queues/emailQueue');
 const {ANONYMOUS_USER_ID} = require("../constants");
-const {ValidationError} = require('../exceptions');
+const {validateRequiredFields, validateEmail, validateUrl, validateUuid} = require('../helpers/validation');
 
 /**
  * POST /api/notifications/send-verification
@@ -24,14 +24,16 @@ router.post('/send-verification', async (req, res, next) => {
     try{
         const {email, username, verificationLink, userId, subject, callbackUrl} = req.body;
 
-        if (!email || !username || !verificationLink) {
-            throw new ValidationError('Missing required fields: email, username, verificationLink', {
-                missing: {
-                    email: !email,
-                    username: !username,
-                    verificationLink: !verificationLink
-                }
-            });
+        // Validate required fields
+        validateRequiredFields(req.body, ['email', 'username', 'verificationLink']);
+
+        // Validate email format
+        validateEmail(email);
+
+        // Validate URLs if provided
+        validateUrl(verificationLink, 'verificationLink');
+        if (callbackUrl) {
+            validateUrl(callbackUrl, 'callbackUrl');
         }
 
         const notification = await emailService.createNotification({
@@ -86,14 +88,15 @@ router.post('/send', async (req, res, next) => {
     try {
         const {email, subject, message, userId, callbackUrl} = req.body;
 
-        if (!email || !subject || !message) {
-            throw new ValidationError('Missing required fields: email, subject, message', {
-                missing: {
-                    email: !email,
-                    subject: !subject,
-                    message: !message
-                }
-            });
+        // Validate required fields
+        validateRequiredFields(req.body, ['email', 'subject', 'message']);
+
+        // Validate email format
+        validateEmail(email);
+
+        // Validate callback URL if provided
+        if (callbackUrl) {
+            validateUrl(callbackUrl, 'callbackUrl');
         }
 
         const notification = await emailService.createNotification({
@@ -141,6 +144,7 @@ router.post('/send', async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
     try{
         const id = req.params.id;
+        validateUuid(id, 'id');
         const notification = await emailService.getById(id);
 
         res.status(200).json({success: true, data: notification});
@@ -162,6 +166,7 @@ router.get('/:id', async (req, res, next) => {
 router.get('/user/:userId/stats', async (req, res, next) => {
     try {
         const userId = req.params.userId;
+        validateUuid(userId, 'userId');
         const stats = await emailService.getStatsByUserId(userId);
 
         res.status(200).json({success: true, data: stats});

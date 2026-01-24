@@ -7,6 +7,7 @@ const path = require('path');
 const notificationRepository = require('../../repositories/notificationRepository');
 const {isValidStatusId} = require('../../constants/index');
 const {NotFoundError, ValidationError, ForbiddenError} = require('../../exceptions');
+const {validateEmail} = require('../../helpers/validation');
 
 /**
  * @typedef {import('../../types/notification').Notification} Notification
@@ -119,11 +120,9 @@ class EmailService {
      */
     async createNotification({userId, type, channel, subject, content, metadata = {}}) {
         // Validate email format if channel is email
+        // channel property is delivery address (email, websocket or sth else)
         if (type === 'email' && channel) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(channel)) {
-                throw new ValidationError('Invalid email address format', {field: 'email', value: channel});
-            }
+            validateEmail(channel, type);
         }
 
         return await notificationRepository.create({

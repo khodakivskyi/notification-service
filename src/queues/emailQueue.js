@@ -15,24 +15,23 @@ class EmailQueue {
      */
     async init() {
         try {
-            /** @type {import('amqplib').Channel} */
-            const channel = await rabbitMQConnection.getChannel();
+            const consumeChannel = await rabbitMQConnection.getConsumeChannel();
 
             // DLX (Dead Letter Exchange) - where RabbitMQ routes dead messages
-            await channel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', {durable: true});
+            await consumeChannel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', {durable: true});
 
             // DLQ (Dead Letter Queue) - where dead messages are stored
-            await channel.assertQueue(config.rabbitmq.queues.emailDlq, { durable: true });
+            await consumeChannel.assertQueue(config.rabbitmq.queues.emailDlq, {durable: true});
 
             //Bind DLQ to DLX using a routing key
             const dlx = String(config.rabbitmq.exchanges.dlx);
             const dlq = String(config.rabbitmq.queues.emailDlq);
             const dlqKey = String(config.rabbitmq.routingKeys.emailDlq);
 
-            await channel.bindQueue(dlq, dlx, dlqKey);
+            await consumeChannel.bindQueue(dlq, dlx, dlqKey);
 
             // Main email queue configured with DLX settings
-            await channel.assertQueue(this.queueName, {
+            await consumeChannel.assertQueue(this.queueName, {
                 durable: true,
                 arguments: {
                     'x-message-ttl': config.rabbitmq.settings.ttl,
@@ -88,8 +87,7 @@ class EmailQueue {
      */
     async addJob(type, data) {
         try {
-            /** @type {import('amqplib').Channel} */
-            const channel = await rabbitMQConnection.getChannel();
+            const publishChannel = await rabbitMQConnection.getPublishChannel();
 
             const job = {
                 type,
@@ -100,17 +98,14 @@ class EmailQueue {
 
             const message = Buffer.from(JSON.stringify(job));
 
-            const sent = channel.sendToQueue(this.queueName, message, {
+            publishChannel.sendToQueue(this.queueName, message, {
                 persistent: true,
                 contentType: 'application/json',
             });
 
-            if (sent) {
-                logger.info('Job added to queue', {type, to: data.to || data.email});
-                return true;
-            } else {
-                throw new Error('Failed to send message to queue');
-            }
+            await publishChannel.waitForConfirms();
+            logger.info('Job added to queue', {type, to: data.to || data.email});
+            return true;
         } catch (error) {
             logger.error('Failed to add job to queue', {
                 type,
@@ -125,9 +120,8 @@ class EmailQueue {
      */
     async getStats() {
         try {
-            /** @type {import('amqplib').Channel} */
-            const channel = await rabbitMQConnection.getChannel();
-            const queueInfo = await channel.checkQueue(this.queueName);
+            const consumeChannel = await rabbitMQConnection.getConsumeChannel();
+            const queueInfo = await consumeChannel.checkQueue(this.queueName);
             return {
                 queue: this.queueName,
                 messageCount: queueInfo.messageCount,

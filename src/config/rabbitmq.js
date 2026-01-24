@@ -8,7 +8,8 @@ const config = require('../config/env');
 class RabbitMQConnection {
     constructor() {
         this.connection = null;
-        this.channel = null;
+        this.consumeChannel = null;
+        this.publishChannel = null;
         this.isConnected = false;
     }
 
@@ -17,14 +18,15 @@ class RabbitMQConnection {
      */
     async connect() {
         if (this.isConnected) {
-            return this.channel;
+            return this.consumeChannel;
         }
 
         try {
             logger.info('Connecting to RabbitMQ... ', {url: config.rabbitmq.url});
 
             this.connection = await amqp.connect(config.rabbitmq.url);
-            this.channel = await this.connection.createChannel();
+            this.consumeChannel = await this.connection.createChannel();
+            this.publishChannel = await this.connection.createConfirmChannel();
 
             this.connection.on('error', (err) => {
                 logger.error('RabbitMQ connection error', {error: err.message});
@@ -38,8 +40,6 @@ class RabbitMQConnection {
 
             this.isConnected = true;
             logger.info('RabbitMQ connected successfully');
-
-            return this.channel;
         } catch (error) {
             logger.error('Failed to connect to RabbitMQ', {error: error.message});
             throw error;
@@ -47,13 +47,26 @@ class RabbitMQConnection {
     }
 
     /**
-     * Get channel (creates connection if not connected)
+     * Get consume channel (for consuming messages, ack/nack operations)
+     * @returns {Promise<import('amqplib').Channel>} Regular channel for consuming
      */
-    async getChannel() {
-        if (!this.isConnected || !this.channel) {
+    async getConsumeChannel() {
+        if (!this.isConnected || !this.consumeChannel) {
             await this.connect();
         }
-        return this.channel;
+        return this.consumeChannel;
+    }
+
+    /**
+     * Get publish channel with confirm mode (for reliable message publishing)
+     * Waits for broker confirmation before returning success
+     * @returns {Promise<import('amqplib').ConfirmChannel>} Confirm channel for publishing
+     */
+    async getPublishChannel() {
+        if (!this.isConnected || !this.publishChannel) {
+            await this.connect();
+        }
+        return this.publishChannel;
     }
 
     /**
@@ -61,8 +74,12 @@ class RabbitMQConnection {
      */
     async close() {
         try {
-            if (this.channel) {
-                await this.channel.close();
+            if (this.consumeChannel) {
+                await this.consumeChannel.close();
+            }
+
+            if(this.publishChannel){
+                await this.publishChannel.close();
             }
 
             if (this.connection) {
@@ -81,7 +98,7 @@ class RabbitMQConnection {
      */
     async checkConnection() {
         try{
-            if(!this.isConnected || !this.channel){
+            if(!this.isConnected || !this.consumeChannel || !this.publishChannel){
                 return false;
             }
 

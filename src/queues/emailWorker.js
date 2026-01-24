@@ -5,6 +5,7 @@ const logger = require('../config/logger');
 const {NOTIFICATION_STATUSES} = require('../constants/index');
 const {ValidationError} = require('../exceptions');
 const {callCallback} = require('../utils/callback');
+const emailQueue = require('./emailQueue');
 
 class EmailWorker {
     constructor() {
@@ -25,18 +26,14 @@ class EmailWorker {
             /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
 
-            await channel.assertQueue(this.queueName, {
-                durable: true,
-                arguments: {
-                    'x-message-ttl': config.rabbitmq.settings.ttl,
-                    'x-max-length': config.rabbitmq.settings.maxLength,
-                }
-            });
+            await emailQueue.init();
+
             await channel.prefetch(1);
 
             logger.info('🚀 Email worker started', {queue: this.queueName});
 
             this.isRunning = true;
+
 
             await channel.consume(
                 this.queueName,
@@ -181,8 +178,6 @@ class EmailWorker {
                     NOTIFICATION_STATUSES.FAILED,
                     error.message
                 );
-
-                //TODO: Dead Letter Queue
             }
 
             // Evoke callback (if exists)
@@ -218,9 +213,13 @@ class EmailWorker {
                     Buffer.from(JSON.stringify(job)),
                     {persistent: true}
                 );
+
+                channel.ack(msg);
+                return;
             }
 
-            channel.ack(msg);
+            // willRetry === false => dead-letter
+            channel.nack(msg, false, false);
         }
     }
 

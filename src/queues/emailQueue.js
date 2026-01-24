@@ -18,14 +18,35 @@ class EmailQueue {
             /** @type {import('amqplib').Channel} */
             const channel = await rabbitMQConnection.getChannel();
 
+            // DLX (Dead Letter Exchange) - where RabbitMQ routes dead messages
+            await channel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', {durable: true});
+
+            // DLQ (Dead Letter Queue) - where dead messages are stored
+            await channel.assertQueue(config.rabbitmq.queues.emailDlq, { durable: true });
+
+            //Bind DLQ to DLX using a routing key
+            const dlx = String(config.rabbitmq.exchanges.dlx);
+            const dlq = String(config.rabbitmq.queues.emailDlq);
+            const dlqKey = String(config.rabbitmq.routingKeys.emailDlq);
+
+            await channel.bindQueue(dlq, dlx, dlqKey);
+
+            // Main email queue configured with DLX settings
             await channel.assertQueue(this.queueName, {
                 durable: true,
                 arguments: {
                     'x-message-ttl': config.rabbitmq.settings.ttl,
                     'x-max-length': config.rabbitmq.settings.maxLength,
-                }
+                    'x-dead-letter-exchange': config.rabbitmq.exchanges.dlx,
+                    'x-dead-letter-routing-key': config.rabbitmq.routingKeys.emailDlq,
+                },
             });
-            logger.info('Email queue initialized', {queue: this.queueName});
+
+            logger.info('Email queue initialized', {
+                queue: this.queueName,
+                dlx: config.rabbitmq.exchanges.dlx,
+                dlq: config.rabbitmq.queues.emailDlq,
+            });
         } catch (error) {
             logger.error('Failed to initialize email queue', {error: error.message});
             throw error;

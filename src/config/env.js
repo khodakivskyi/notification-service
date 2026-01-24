@@ -24,6 +24,9 @@ const envSchema = joi.object({
 
     RABBITMQ_URL:  joi.string().uri().default('amqp://guest:guest@localhost:5672'),
     EMAIL_QUEUE_NAME: joi. string().default('email_notifications'),
+    RABBITMQ_DLX_EXCHANGE: joi.string().default('notification.dlx'),
+    EMAIL_DLQ_NAME: joi.string().default('email.dlq'),
+    EMAIL_DLQ_ROUTING_KEY: joi.string().default('email.dlq'),
 }).unknown();
 
 // .env validation
@@ -59,8 +62,15 @@ module.exports = {
 
     rabbitmq: {
         url: env.RABBITMQ_URL,
+        exchanges: {
+            dlx: env.RABBITMQ_DLX_EXCHANGE,
+        },
         queues: {
             email: env.EMAIL_QUEUE_NAME,
+            emailDlq: env.EMAIL_DLQ_NAME,
+        },
+        routingKeys: {
+            emailDlq: env.EMAIL_DLQ_ROUTING_KEY,
         },
         settings: {
             ttl: Number(process.env.RABBITMQ_EMAIL_TTL) || 24 * 60 * 60 * 1000,

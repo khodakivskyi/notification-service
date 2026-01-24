@@ -24,23 +24,23 @@ class EmailWorker {
 
         try {
             /** @type {import('amqplib').Channel} */
-            const channel = await rabbitMQConnection.getChannel();
+            const consumeChannel = await rabbitMQConnection.getConsumeChannel();
+            const publishChannel = await rabbitMQConnection.getPublishChannel();
 
             await emailQueue.init();
 
-            await channel.prefetch(1);
+            await consumeChannel.prefetch(1);
 
             logger.info('🚀 Email worker started', {queue: this.queueName});
 
             this.isRunning = true;
 
-
-            await channel.consume(
+            await consumeChannel.consume(
                 this.queueName,
                 async (msg) => {
                     if (!msg) return;
 
-                    await this.processMessage(msg, channel);
+                    await this.processMessage(msg, consumeChannel, publishChannel);
                 },
                 {noAck: false}
             );
@@ -53,8 +53,21 @@ class EmailWorker {
     /**
      * Process message
      */
-    async processMessage(msg, channel) {
+    async processMessage(msg, consumeChannel, publishChannel) {
         const startTime = Date.now();
+
+        const job = this.parseAndValidateMessage(msg, consumeChannel);
+        if (!job) return;
+
+        try {
+            await this.executeJob(job);
+            await this.handleSuccess(job, msg, consumeChannel, startTime);
+        } catch (error) {
+            await this.handleError(job, error, msg, consumeChannel, publishChannel);
+        }
+    }
+
+    parseAndValidateMessage(msg, consumeChannel) {
         let job;
 
         try {
@@ -64,7 +77,7 @@ class EmailWorker {
                 error: error.message,
                 raw: msg.content.toString(),
             });
-            channel.ack(msg);
+            consumeChannel.ack(msg);
             return;
         }
 
@@ -72,154 +85,178 @@ class EmailWorker {
             logger.error('Invalid job payload: missing notificationId', {
                 job,
             });
-            channel.ack(msg);
+            consumeChannel.ack(msg);
+            return;
+        }
+        return job;
+    }
+
+    async executeJob(job) {
+        logger.info('Processing job', {
+            type: job.type,
+            timestamp: job.timestamp,
+        });
+
+        await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
+
+        if (job.type === 'verification') {
+            await emailService.sendVerificationEmail(
+                job.data.to || job.data.email,
+                job.data.username,
+                job.data.verificationLink,
+            );
+        } else if (job.type === 'notification') {
+            await emailService.sendNotification(
+                job.data.to || job.data.email,
+                job.data.subject,
+                job.data.message,
+            );
+        } else {
+            throw new ValidationError('Unknown job type', {type: job.type});
+        }
+
+        // Success - remove the message from the queue
+        await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
+    }
+
+    async handleSuccess(job, msg, consumeChannel, startTime) {
+        if (job.data.callbackUrl) {
+            try {
+                const notification = await emailService.getById(job.data.notificationId);
+                await callCallback(job.data.callbackUrl, {
+                    notificationId: notification.id,
+                    status: notification.status,
+                    timestamp: notification.sentAt || notification.updatedAt,
+                    errorMessage: notification.errorMessage ?? null,
+                });
+            } catch (callbackError) {
+                logger.warn('Callback failed', {
+                    callbackUrl: job.data.callbackUrl,
+                    error: callbackError.message,
+                });
+            }
+        }
+
+        consumeChannel.ack(msg);
+        const duration = Date.now() - startTime;
+        logger.info('Job processed successfully', {
+            type: job.type,
+            duration: `${duration}ms`,
+        });
+    }
+
+    async handleError(job, error, msg, consumeChannel, publishChannel) {
+        logger.error('Job failed', {
+            type: job?.type,
+            error: error.message,
+            retries: job?.retries || 0,
+        });
+
+        // Retry logic
+        const maxRetries = 3;
+        const currentRetries = job?.retries || 0;
+        const notificationId = job?.data?.notificationId;
+        const {willRetry, isNonRetriable} = this.shouldRetry(error, currentRetries, maxRetries);
+
+        if (willRetry) {
+            logger.info('Retrying job...', {
+                attempt: currentRetries + 1,
+                maxRetries,
+            });
+
+            await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
+
+            job.retries = currentRetries + 1;
+
+        } else {
+            if (isNonRetriable) {
+                logger.error('Non-retriable error, marking failed', {
+                    type: job?.type,
+                    error: error.message,
+                });
+            } else {
+                logger.error('Max retries reached, marking failed', {
+                    type: job?.type,
+                    retries: currentRetries,
+                    maxRetries,
+                    error: error.message,
+                });
+            }
+
+            await emailService.updateStatus(
+                job.data.notificationId,
+                NOTIFICATION_STATUSES.FAILED,
+                error.message
+            );
+        }
+
+        // Evoke callback (if exists)
+        if (job?.data?.callbackUrl && notificationId) {
+            try {
+                const notification = await emailService.getById(notificationId);
+                await this.sendCallback(job, notification, error.message);
+            } catch (readError) {
+                // fallback: send callback without notification object
+                await this.sendCallback(job, { id: notificationId }, error.message);
+            }
+        }
+
+        if (willRetry) {
+            await this.retryJob(job, publishChannel);
+            consumeChannel.ack(msg);
             return;
         }
 
+        // willRetry === false => dead-letter
+        consumeChannel.nack(msg, false, false);
+    }
+
+    shouldRetry(error, currentRetries, maxRetries) {
+        const isNonRetriable =
+            error instanceof ValidationError ||
+            (error?.isOperational &&
+                typeof error.statusCode === 'number' &&
+                error.statusCode >= 400 &&
+                error.statusCode < 500);
+        const willRetry = !isNonRetriable && currentRetries < maxRetries;
+
+        return {willRetry, isNonRetriable};
+    }
+
+    async retryJob(job, publishChannel) {
+        publishChannel.sendToQueue(
+            this.queueName,
+            Buffer.from(JSON.stringify(job)),
+            {persistent: true}
+        );
+
+        await publishChannel.waitForConfirms();
+    }
+
+    async sendCallback(job, notification, errorMessage) {
+        if (!job?.data?.callbackUrl) return;
+
         try {
-            logger.info('Processing job', {
-                type: job.type,
-                timestamp: job.timestamp,
+            await callCallback(job.data.callbackUrl, {
+                notificationId: notification.id,
+                status: notification.status,
+                timestamp: notification.sentAt || notification.updatedAt,
+                errorMessage: errorMessage ?? notification.errorMessage ?? null,
             });
-
-            await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
-
-            if (job.type === 'verification') {
-                await emailService.sendVerificationEmail(
-                    job.data.to || job.data.email,
-                    job.data.username,
-                    job.data.verificationLink,
-                );
-            } else if (job.type === 'notification') {
-                await emailService.sendNotification(
-                    job.data.to || job.data.email,
-                    job.data.subject,
-                    job.data.message,
-                );
-            } else {
-                throw new ValidationError('Unknown job type', {type: job.type});
-            }
-
-            const notificationId = job.data.notificationId;
-
-            // Success - remove the message from the queue
-            await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
-
-            if (job.data.callbackUrl) {
-                try {
-                    const notification = await emailService.getById(notificationId);
-                    await callCallback(job.data.callbackUrl, {
-                        notificationId: notification.id,
-                        status: notification.status,
-                        timestamp: notification.sentAt || notification.updatedAt,
-                        errorMessage: notification.errorMessage ?? null,
-                    });
-                } catch (callbackError) {
-                    logger.warn('Callback failed', {
-                        callbackUrl: job.data.callbackUrl,
-                        error: callbackError.message,
-                    });
-                }
-            }
-
-            channel.ack(msg);
-            const duration = Date.now() - startTime;
-            logger.info('Job processed successfully', {
-                type: job.type,
-                duration: `${duration}ms`,
-            });
-
-        } catch (error) {
-            logger.error('Job failed', {
-                type: job?.type,
-                error: error.message,
-                retries: job?.retries || 0,
-            });
-
-            // Retry logic
-            const maxRetries = 3;
-            const currentRetries = job?.retries || 0;
-            const notificationId = job?.data?.notificationId;
-            const isNonRetriable =
-                error instanceof ValidationError ||
-                (error?.isOperational &&
-                    typeof error.statusCode === 'number' &&
-                    error.statusCode >= 400 &&
-                    error.statusCode < 500);
-            const willRetry = !isNonRetriable && currentRetries < maxRetries;
-
-            if (willRetry) {
-                logger.info('Retrying job...', {
-                    attempt: currentRetries + 1,
-                    maxRetries,
+        } catch (readOrCallbackError) {
+            try {
+                await callCallback(job.data.callbackUrl, {
+                    notificationId: job.data.notificationId,
+                    status: 'failed',
+                    timestamp: new Date().toISOString(),
+                    errorMessage: errorMessage,
                 });
-
-                await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
-
-                job.retries = currentRetries + 1;
-
-            } else {
-                if (isNonRetriable) {
-                    logger.error('Non-retriable error, marking failed', {
-                        type: job?.type,
-                        error: error.message,
-                    });
-                } else {
-                    logger.error('Max retries reached, marking failed', {
-                        type: job?.type,
-                        retries: currentRetries,
-                        maxRetries,
-                        error: error.message,
-                    });
-                }
-
-                await emailService.updateStatus(
-                    job.data.notificationId,
-                    NOTIFICATION_STATUSES.FAILED,
-                    error.message
-                );
+            } catch (callbackError) {
+                logger.warn('Callback failed on error', {
+                    callbackUrl: job.data.callbackUrl,
+                    error: callbackError.message,
+                });
             }
-
-            // Evoke callback (if exists)
-            if (job?.data?.callbackUrl && notificationId) {
-                try {
-                    const notification = await emailService.getById(notificationId);
-                    await callCallback(job.data.callbackUrl, {
-                        notificationId: notification.id,
-                        status: notification.status,
-                        timestamp: notification.sentAt || notification.updatedAt,
-                        errorMessage: notification.errorMessage ?? error.message,
-                    });
-                } catch (readOrCallbackError) {
-                    try {
-                        await callCallback(job.data.callbackUrl, {
-                            notificationId,
-                            status: 'failed',
-                            timestamp: new Date().toISOString(),
-                            errorMessage: error.message,
-                        });
-                    } catch (callbackError) {
-                        logger.warn('Callback failed on error', {
-                            callbackUrl: job.data.callbackUrl,
-                            error: callbackError.message,
-                        });
-                    }
-                }
-            }
-
-            if (willRetry) {
-                channel.sendToQueue(
-                    this.queueName,
-                    Buffer.from(JSON.stringify(job)),
-                    {persistent: true}
-                );
-
-                channel.ack(msg);
-                return;
-            }
-
-            // willRetry === false => dead-letter
-            channel.nack(msg, false, false);
         }
     }
 

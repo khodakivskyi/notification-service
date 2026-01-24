@@ -24,9 +24,9 @@ const envSchema = joi.object({
 
     RABBITMQ_URL:  joi.string().uri().default('amqp://guest:guest@localhost:5672'),
     EMAIL_QUEUE_NAME: joi. string().default('email_notifications'),
-    RABBITMQ_DLX_EXCHANGE: joi.string().default('notification.dlx'),
-    EMAIL_DLQ_NAME: joi.string().default('email.dlq'),
-    EMAIL_DLQ_ROUTING_KEY: joi.string().default('email.dlq'),
+    RABBITMQ_DLX_EXCHANGE: joi.string().trim().min(1).default('notification.dlx'),
+    EMAIL_DLQ_NAME: joi.string().trim().min(1).default('email.dlq'),
+    EMAIL_DLQ_ROUTING_KEY: joi.string().trim().min(1).default('email.dlq'),
 }).unknown();
 
 // .env validation

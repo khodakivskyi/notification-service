@@ -4,9 +4,8 @@ const config = require('../../config/env');
 const fs = require('fs').promises;
 const Handlebars = require('handlebars');
 const path = require('path');
-const {withRetry} = require('../../utils/retry');
 const notificationRepository = require('../../repositories/notificationRepository');
-const {NOTIFICATION_STATUSES, isValidStatusId} = require('../../constants/index');
+const {isValidStatusId} = require('../../constants/index');
 const {NotFoundError, ValidationError, ForbiddenError} = require('../../exceptions');
 
 /**
@@ -57,43 +56,28 @@ class EmailService {
      * @param {string} to - Recipient email
      * @param {string} username - Username
      * @param {string} verificationLink - Verification link
-     * @param {string} notificationId - Notification ID
      */
-    async sendVerificationEmail(to, username, verificationLink, notificationId) {
-        if (!notificationId) {
-            throw new ValidationError('Notification ID is required');
+    async sendVerificationEmail(to, username, verificationLink) {
+        try {
+            const html = await this.renderTemplate('verification', {
+                username,
+                verificationLink,
+            });
+
+            const mailOptions = {
+                from: config.smtp.user,
+                to: to,
+                subject: 'Verify your email',
+                html: html,
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+
+            logger.info('Verification email sent', {to, messageId: info.messageId});
+        } catch (error) {
+            logger.error('Error sending verification email', {to, error});
+            throw error;
         }
-
-        const notification = await this.getById(notificationId);
-
-        return withRetry(async () => {
-            try {
-                const html = await this.renderTemplate('verification', {
-                    username,
-                    verificationLink,
-                });
-
-                const mailOptions = {
-                    from: config.smtp.user,
-                    to: to,
-                    subject: 'Verify your email',
-                    html: html,
-                };
-
-                const info = await this.transporter.sendMail(mailOptions);
-
-                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.SENT);
-                notification = await this.getById(notificationId);
-                logger.info('Verification email sent', {to, messageId: info.messageId});
-
-                return {info, notification};
-            } catch (error) {
-                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.FAILED, error.message);
-                notification = await this.getById(notificationId);
-                logger.error('Error sending verification email', {to, error});
-                throw error;
-            }
-        });
     }
 
 
@@ -102,38 +86,24 @@ class EmailService {
      * @param {string} to - Recipient email
      * @param {string} subject - Subject
      * @param {string} message - message
-     * @param {string} notificationId - Notification ID
      */
-    async sendNotification(to, subject, message, notificationId) {
-        if (!notificationId) {
-            throw new ValidationError('Notification ID is required');
+    async sendNotification(to, subject, message) {
+        try {
+            const mailOptions = {
+                from: config.smtp.user,
+                to: to,
+                subject: subject,
+                text: message,
+                html: `<p>${message}</p>`,
+            };
+
+            const info = await this.transporter.sendMail(mailOptions);
+
+            logger.info('Notification email sent', {to, messageId: info.messageId});
+        } catch (error) {
+            logger.error('Error sending notification email', {to, error});
+            throw error;
         }
-
-        const notification = await this.getById(notificationId);
-
-        return withRetry(async () => {
-            try {
-                const mailOptions = {
-                    from: config.smtp.user,
-                    to: to,
-                    subject: subject,
-                    text: message,
-                    html: `<p>${message}</p>`,
-                };
-
-                const info = await this.transporter.sendMail(mailOptions);
-
-                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.SENT);
-                notification = await this.getById(notificationId);
-                logger.info('Notification email sent', {to, messageId: info.messageId});
-                return {info, notification};
-            } catch (error) {
-                await this.updateStatus(notification.id, NOTIFICATION_STATUSES.FAILED, error.message);
-                notification = await this.getById(notificationId);
-                logger.error('Error sending notification email', {to, error});
-                throw error;
-            }
-        })
     }
 
     /**
@@ -173,8 +143,8 @@ class EmailService {
      * @param {string|null} errorMessage - Optional error message
      * @returns {Promise<void>}
      */
-    async updateStatus(id, statusId, errorMessage = null){
-        if(!isValidStatusId(statusId)) {
+    async updateStatus(id, statusId, errorMessage = null) {
+        if (!isValidStatusId(statusId)) {
             throw new NotFoundError('Status', statusId);
         }
 
@@ -201,7 +171,7 @@ class EmailService {
         }
 
         if (userId && notification.userId !== userId) {
-            throw new ForbiddenError ();
+            throw new ForbiddenError();
         }
 
         return notification;
@@ -222,4 +192,4 @@ class EmailService {
     }
 }
 
-module.exports = new EmailService;
+module.exports = new EmailService();

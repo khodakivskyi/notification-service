@@ -27,6 +27,7 @@ const envSchema = joi.object({
     RABBITMQ_DLX_EXCHANGE: joi.string().trim().min(1).default('notification.dlx'),
     EMAIL_DLQ_NAME: joi.string().trim().min(1).default('email.dlq'),
     EMAIL_DLQ_ROUTING_KEY: joi.string().trim().min(1).default('email.dlq'),
+    EMAIL_RETRY_QUEUE_NAME: joi.string().trim().min(1).default('email.retry'),
 }).unknown();
 
 // .env validation
@@ -67,6 +68,7 @@ module.exports = {
         },
         queues: {
             email: env.EMAIL_QUEUE_NAME,
+            emailRetry: env.EMAIL_RETRY_QUEUE_NAME,
             emailDlq: env.EMAIL_DLQ_NAME,
         },
         routingKeys: {

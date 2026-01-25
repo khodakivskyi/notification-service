@@ -197,7 +197,7 @@ class EmailWorker {
                 await this.sendCallback(job, notification, error.message);
             } catch (readError) {
                 // fallback: send callback without notification object
-                await this.sendCallback(job, { id: notificationId }, error.message);
+                await this.sendCallback(job, {id: notificationId}, error.message);
             }
         }
 
@@ -224,14 +224,33 @@ class EmailWorker {
     }
 
     async retryJob(job, publishChannel) {
+        const delay = this.getRetryDelay(job.retries);
+
         publishChannel.sendToQueue(
-            this.queueName,
+            config.rabbitmq.queues.emailRetry,
             Buffer.from(JSON.stringify(job)),
-            {persistent: true}
+            {
+                persistent: true,
+                expiration: String(delay), // ms
+            }
         );
 
         await publishChannel.waitForConfirms();
+
+        logger.info('Job scheduled for retry', {
+            notificationId: job.data.notificationId,
+            retries: job.retries,
+            delayMs: delay,
+        });
     }
+
+    getRetryDelay(retries) {
+        const baseDelay = 1000; // 1s
+        const maxDelay = 60_000; // 1 min cap
+
+        return Math.min(baseDelay * 2 ** (retries - 1), maxDelay);
+    }
+
 
     async sendCallback(job, notification, errorMessage) {
         if (!job?.data?.callbackUrl) return;

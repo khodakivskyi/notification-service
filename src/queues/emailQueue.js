@@ -34,11 +34,19 @@ class EmailQueue {
             await consumeChannel.assertQueue(this.queueName, {
                 durable: true,
                 arguments: {
-                    'x-message-ttl': config.rabbitmq.settings.ttl,
                     'x-max-length': config.rabbitmq.settings.maxLength,
                     'x-dead-letter-exchange': config.rabbitmq.exchanges.dlx,
                     'x-dead-letter-routing-key': config.rabbitmq.routingKeys.emailDlq,
                 },
+            });
+
+            // Retry queue
+            await consumeChannel.assertQueue(config.rabbitmq.queues.emailRetry, {
+                durable: true,
+                arguments: {
+                    'x-dead-letter-exchange': '',
+                    'x-dead-letter-routing-key': this.queueName,
+                }
             });
 
             logger.info('Email queue initialized', {

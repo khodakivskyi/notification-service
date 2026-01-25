@@ -139,15 +139,15 @@ class EmailService {
      * Update notification status
      * @param {string} id - Notification ID
      * @param {number} statusId - Status ID
-     * @param {string|null} errorMessage - Optional error message
-     * @returns {Promise<void>}
+     * @param {string|null} errorMessage - Optional error message (for FAILED)
+     * @returns {Promise<boolean|void>} - When statusId is SENDING, returns true if claimed, false otherwise; else undefined
      */
     async updateStatus(id, statusId, errorMessage = null) {
         if (!isValidStatusId(statusId)) {
             throw new NotFoundError('Status', statusId);
         }
 
-        await notificationRepository.updateStatus(id, statusId, errorMessage);
+        return notificationRepository.updateStatus(id, statusId, errorMessage);
     }
 
     /**

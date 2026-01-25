@@ -1,5 +1,6 @@
 const db = require("../config/database");
 const logger = require("../config/logger");
+const {NOTIFICATION_STATUSES} = require("../constants/index");
 
 /**
  * @typedef {import('../types/notification').Notification} Notification
@@ -36,39 +37,64 @@ class NotificationRepository {
     }
 
     /**
-     * Generic method to update status
+     * Update status. For SENDING, performs an atomic claim (only if current status is QUEUED or RETRYING)
+     * and returns whether this process claimed it; otherwise just updates.
      * @param {string} id - Notification ID
      * @param {number} statusId - Status ID
-     * @param {string|null} errorMessage - Optional error message
-     * @returns {Promise<void>}
+     * @param {string|null} errorMessage - Optional error message (for FAILED)
+     * @returns {Promise<boolean|void>} - When statusId is SENDING, returns true if claimed, false otherwise; else undefined
      */
-    async updateStatus(id, statusId, errorMessage = null){
-        try{
-            // If status is not FAILED (4), clear error message
-            // If status is FAILED and errorMessage provided, set it
-            const updates = ['"statusId" = $2'];
-            const params = [id, statusId];
-
-            if (statusId === 4 && errorMessage !== null) {
-                updates.push('"errorMessage" = $3');
-                params.push(errorMessage);
-            } else if (statusId !== 4) {
-                // Non-FAILED status - clear error message
-                updates.push('"errorMessage" = NULL');
+    async updateStatus(id, statusId, errorMessage = null) {
+        if (statusId === NOTIFICATION_STATUSES.SENDING) {
+            try {
+                const result = await db.query(
+                    `UPDATE notifications
+                     SET "statusId"     = $2,
+                         "errorMessage" = NULL
+                     WHERE id = $1
+                       AND "statusId" IN ($3, $4) RETURNING id`,
+                    [
+                        id,
+                        NOTIFICATION_STATUSES.SENDING,
+                        NOTIFICATION_STATUSES.QUEUED,
+                        NOTIFICATION_STATUSES.RETRYING,
+                    ]
+                );
+                const claimed = result.rowCount > 0;
+                if (claimed) {
+                    logger.info("Notification claimed for processing", {id});
+                }
+                return claimed;
+            } catch (error) {
+                logger.error("Error claiming notification for processing", {id, error: error.message});
+                throw error;
             }
+        } else {
+            try {
+                // If status is not FAILED, clear error message; if FAILED and errorMessage provided, set it
+                const updates = ['"statusId" = $2'];
+                const params = [id, statusId];
 
-            await db.query(
-                `UPDATE notifications
-                 SET ${updates.join(', ')}
-                 WHERE id = $1`,
-                params
-            );
+                if (statusId === NOTIFICATION_STATUSES.FAILED && errorMessage !== null) {
+                    updates.push('"errorMessage" = $3');
+                    params.push(errorMessage);
+                } else if (statusId !== NOTIFICATION_STATUSES.FAILED) {
+                    // Non-FAILED status - clear error message
+                    updates.push('"errorMessage" = NULL');
+                }
 
-            logger.info("Notification status updated", {id, statusId, hasError: errorMessage !== null});
-        }
-        catch(error){
-            logger.error("Error updating notification status", {id, statusId, error: error.message});
-            throw error;
+                await db.query(
+                    `UPDATE notifications
+                     SET ${updates.join(', ')}
+                     WHERE id = $1`,
+                    params
+                );
+
+                logger.info("Notification status updated", {id, statusId, hasError: errorMessage !== null});
+            } catch (error) {
+                logger.error("Error updating notification status", {id, statusId, error: error.message});
+                throw error;
+            }
         }
     }
 

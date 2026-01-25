@@ -60,8 +60,8 @@ class EmailWorker {
         if (!job) return;
 
         try {
-            await this.executeJob(job);
-            await this.handleSuccess(job, msg, consumeChannel, startTime);
+            const skipped = await this.executeJob(job);
+            await this.handleSuccess(job, msg, consumeChannel, startTime, {skipped});
         } catch (error) {
             await this.handleError(job, error, msg, consumeChannel, publishChannel);
         }
@@ -91,13 +91,25 @@ class EmailWorker {
         return job;
     }
 
+    /**
+     * @returns {Promise<boolean>} - true if job was skipped (already processed by another worker)
+     */
     async executeJob(job) {
+        const notificationId = job.data.notificationId;
+        const claimed = await emailService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
+        if (!claimed) {
+            logger.info('Notification already processed or claimed by another worker, skipping', {
+                notificationId,
+                type: job.type,
+            });
+            return true;
+        }
+
         logger.info('Processing job', {
             type: job.type,
             timestamp: job.timestamp,
+            notificationId,
         });
-
-        await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
 
         if (job.type === 'verification') {
             await emailService.sendVerificationEmail(
@@ -115,12 +127,12 @@ class EmailWorker {
             throw new ValidationError('Unknown job type', {type: job.type});
         }
 
-        // Success - remove the message from the queue
-        await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
+        await emailService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
+        return false;
     }
 
-    async handleSuccess(job, msg, consumeChannel, startTime) {
-        if (job.data.callbackUrl) {
+    async handleSuccess(job, msg, consumeChannel, startTime, {skipped = false} = {}) {
+        if (!skipped && job.data.callbackUrl) {
             try {
                 const notification = await emailService.getById(job.data.notificationId);
                 await callCallback(job.data.callbackUrl, {

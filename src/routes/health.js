@@ -1,9 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
-const logger = require('../config/logger');
-const config = require('../config/env');
 const db = require("../config/database");
+const rabbitmq = require("../config/rabbitmq");
 
 // GET /health
 router.get('/health', async (req, res) => {
@@ -16,7 +14,7 @@ router.get('/health', async (req, res) => {
 // GET /ready
 router.get('/ready', async (req, res) => {
     const checks = {
-        smtp: await checkSmtp(),
+        rabbitmq: await rabbitmq.checkConnection(),
         database: await db.checkConnection(),
     };
 
@@ -29,27 +27,5 @@ router.get('/ready', async (req, res) => {
         checks: checks,
     });
 });
-
-async function checkSmtp() {
-    try{
-        /** @type {import('nodemailer').Transporter} */
-        const transporter = nodemailer.createTransport({
-            host: config.smtp.host,
-            port: config.smtp.port,
-            auth: {
-                user: config.smtp.user,
-                pass: config.smtp.pass,
-            },
-        });
-
-        await transporter.verify();
-
-        return true;
-    }
-    catch (error){
-        logger.error("SMTP health check failed", {error: error.message});
-        return false;
-    }
-}
 
 module.exports = router;

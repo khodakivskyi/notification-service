@@ -8,7 +8,6 @@ const db = require('./config/database');
  * Workers Entry Point
  * Launches RabbitMQ consumers separately from the API
  */
-
 async function startWorkers(){
     try{
         logger.info('🚀 Starting workers...');

@@ -3,7 +3,8 @@ const router = express.Router();
 const emailService = require('../services/email/emailService');
 const emailQueue = require('../queues/emailQueue');
 const {ANONYMOUS_USER_ID} = require("../constants");
-const {validateRequiredFields, validateEmail, validateUrl, validateUuid} = require('../helpers/validation');
+const validate = require('../middleware/validate');
+const { sendVerification, sendNotification, uuidParam, userIdParam } = require('../schemas/notificationSchemas');
 
 /**
  * POST /api/notifications/send-verification
@@ -20,21 +21,9 @@ const {validateRequiredFields, validateEmail, validateUrl, validateUuid} = requi
  * @returns {Promise<Object>} 400 - Missing required fields
  * @returns {Promise<Object>} 500 - Server error
  */
-router.post('/send-verification', async (req, res, next) => {
+router.post('/send-verification', validate(sendVerification), async (req, res, next) => {
     try{
         const {email, username, verificationLink, userId, subject, callbackUrl} = req.body;
-
-        // Validate required fields
-        validateRequiredFields(req.body, ['email', 'username', 'verificationLink']);
-
-        // Validate email format
-        validateEmail(email);
-
-        // Validate URLs if provided
-        validateUrl(verificationLink, 'verificationLink');
-        if (callbackUrl) {
-            validateUrl(callbackUrl, 'callbackUrl');
-        }
 
         const notification = await emailService.createNotification({
             userId: userId || ANONYMOUS_USER_ID,
@@ -84,7 +73,7 @@ router.post('/send-verification', async (req, res, next) => {
  * @returns {Promise<Object>} 400 - Missing required fields
  * @returns {Promise<Object>} 500 - Server error
  */
-router.post('/send', async (req, res, next) => {
+router.post('/send', validate(sendNotification), async (req, res, next) => {
     try {
         const {email, subject, message, userId, callbackUrl} = req.body;
 
@@ -141,7 +130,7 @@ router.post('/send', async (req, res, next) => {
  * @returns {Promise<Object>} 404 - Notification not found
  * @returns {Promise<Object>} 500 - Server error
  */
-router.get('/:id', async (req, res, next) => {
+router.get('/:id', validate(uuidParam), async (req, res, next) => {
     try{
         const id = req.params.id;
         validateUuid(id, 'id');
@@ -163,7 +152,7 @@ router.get('/:id', async (req, res, next) => {
  * @returns {Promise<Object>} 200 - Statistics data (array of stats by type and status)
  * @returns {Promise<Object>} 500 - Server error
  */
-router.get('/user/:userId/stats', async (req, res, next) => {
+router.get('/user/:userId/stats', validate(userIdParam), async (req, res, next) => {
     try {
         const userId = req.params.userId;
         validateUuid(userId, 'userId');

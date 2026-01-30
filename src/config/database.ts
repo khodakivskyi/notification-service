@@ -33,7 +33,6 @@ pool.on('error', (error: Error) => {
   });
 });
 
-
 // ========================================
 // Helpers
 // ========================================
@@ -44,7 +43,10 @@ pool.on('error', (error: Error) => {
  * @param params - Parameters (for prepared statements)
  * @returns Query result
  */
-export async function query<T extends Record<string, any> = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+export async function query<T extends Record<string, any> = any>(
+  text: string,
+  params?: any[],
+): Promise<QueryResult<T>> {
   const start = Date.now();
 
   try {

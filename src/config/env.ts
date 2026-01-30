@@ -6,9 +6,7 @@ dotenv.config();
 
 // Define the schema for environment variables
 const envSchema = Joi.object({
-  NODE_ENV: Joi.string()
-    .valid('development', 'production', 'test')
-    .default('development'),
+  NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
 
   PORT: Joi.number().default(3000),
 
@@ -19,9 +17,7 @@ const envSchema = Joi.object({
   SMTP_USER: Joi.string().email().required(),
   SMTP_PASS: Joi.string().required(),
 
-  LOG_LEVEL: Joi.string()
-    .valid('error', 'warn', 'info', 'debug')
-    .default('info'),
+  LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'debug').default('info'),
 
   RABBITMQ_URL: Joi.string().uri().default('amqp://guest:guest@localhost:5672'),
   EMAIL_QUEUE_NAME: Joi.string().default('email_notifications'),

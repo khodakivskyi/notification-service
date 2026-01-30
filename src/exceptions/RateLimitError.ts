@@ -12,7 +12,15 @@ export class RateLimitError extends BaseError {
     this.retryAfter = retryAfter; // After how many seconds can it be repeated
   }
 
-  toJSON(): { error: { name: string; message: string; statusCode: number; retryAfter: number; timestamp: string } } {
+  toJSON(): {
+    error: {
+      name: string;
+      message: string;
+      statusCode: number;
+      retryAfter: number;
+      timestamp: string;
+    };
+  } {
     return {
       error: {
         name: this.name,

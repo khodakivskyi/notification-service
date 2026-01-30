@@ -39,7 +39,9 @@ class EmailQueue {
       const consumeChannel = await rabbitMQConnection.getConsumeChannel();
 
       // DLX (Dead Letter Exchange) - where RabbitMQ routes dead messages
-      await consumeChannel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', { durable: true });
+      await consumeChannel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', {
+        durable: true,
+      });
 
       // DLQ (Dead Letter Queue) - where dead messages are stored
       await consumeChannel.assertQueue(config.rabbitmq.queues.emailDlq, { durable: true });

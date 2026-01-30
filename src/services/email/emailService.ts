@@ -33,11 +33,7 @@ class EmailService {
    */
   async renderTemplate(templateName: string, data: Record<string, any>): Promise<string> {
     try {
-      const templatePath = path.join(
-          __dirname,
-          'templates',
-          `${templateName}.hbs`
-      );
+      const templatePath = path.join(__dirname, 'templates', `${templateName}.hbs`);
 
       const templateSource = await readFile(templatePath, 'utf-8');
 
@@ -59,7 +55,11 @@ class EmailService {
    * @param username - Username
    * @param verificationLink - Verification link
    */
-  async sendVerificationEmail(to: string, username: string, verificationLink: string): Promise<void> {
+  async sendVerificationEmail(
+    to: string,
+    username: string,
+    verificationLink: string,
+  ): Promise<void> {
     try {
       const html = await this.renderTemplate('verification', {
         username,
@@ -100,7 +100,7 @@ class EmailService {
 
       await this.transporter.sendMail(mailOptions);
 
-      logger.info('Notification email sent', { to, });
+      logger.info('Notification email sent', { to });
     } catch (error: any) {
       logger.error('Error sending notification email', { to, error });
       throw error;
@@ -112,7 +112,14 @@ class EmailService {
    * @param data - Notification data
    * @returns Created notification
    */
-  async createNotification({ userId, type, channel, subject, content, metadata = {} }: CreateNotificationInput): Promise<Notification> {
+  async createNotification({
+    userId,
+    type,
+    channel,
+    subject,
+    content,
+    metadata = {},
+  }: CreateNotificationInput): Promise<Notification> {
     // Validate email format if channel is email
     // channel property is delivery address (email, websocket or sth else)
     if (type === 'email' && channel) {
@@ -136,7 +143,11 @@ class EmailService {
    * @param errorMessage - Optional error message (for FAILED)
    * @returns When statusId is SENDING, returns true if claimed, false otherwise; else undefined
    */
-  async updateStatus(id: string, statusId: number, errorMessage: string | null = null): Promise<boolean | void> {
+  async updateStatus(
+    id: string,
+    statusId: number,
+    errorMessage: string | null = null,
+  ): Promise<boolean | void> {
     if (!isValidStatusId(statusId)) {
       throw new NotFoundError('Status', statusId.toString());
     }

@@ -14,7 +14,16 @@ export class NotFoundError extends BaseError {
     this.identifier = identifier;
   }
 
-  toJSON(): { error: { name: string; message: string; statusCode: number; resource: string; identifier?: string; timestamp: string } } {
+  toJSON(): {
+    error: {
+      name: string;
+      message: string;
+      statusCode: number;
+      resource: string;
+      identifier?: string;
+      timestamp: string;
+    };
+  } {
     return {
       error: {
         name: this.name,

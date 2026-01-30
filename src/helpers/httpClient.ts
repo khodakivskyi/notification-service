@@ -36,12 +36,7 @@ class HttpClient {
    * @returns Promise with response
    */
   async request(url: string, options: RequestOptions = {}): Promise<HttpResponse> {
-    const {
-      method = 'GET',
-      body = null,
-      headers = {},
-      timeout = this.defaultTimeout,
-    } = options;
+    const { method = 'GET', body = null, headers = {}, timeout = this.defaultTimeout } = options;
 
     const parsedUrl = new URL(url);
     const client = parsedUrl.protocol === 'https:' ? https : http;

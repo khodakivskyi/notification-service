@@ -12,7 +12,9 @@ export class ValidationError extends BaseError {
     this.details = details;
   }
 
-  toJSON(): { error: { name: string; message: string; statusCode: number; details?: any; timestamp: string } } {
+  toJSON(): {
+    error: { name: string; message: string; statusCode: number; details?: any; timestamp: string };
+  } {
     return {
       error: {
         name: this.name,

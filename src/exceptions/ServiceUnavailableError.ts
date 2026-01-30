@@ -14,7 +14,16 @@ export class ServiceUnavailableError extends BaseError {
     this.originalError = originalError?.message;
   }
 
-  toJSON(): { error: { name: string; message: string; statusCode: number; service: string; originalError?: string; timestamp: string } } {
+  toJSON(): {
+    error: {
+      name: string;
+      message: string;
+      statusCode: number;
+      service: string;
+      originalError?: string;
+      timestamp: string;
+    };
+  } {
     return {
       error: {
         name: this.name,

@@ -2,14 +2,15 @@
  * Notification Status IDs
  */
 export const NOTIFICATION_STATUSES = {
-  QUEUED: 1,    // 'queued'
-  SENDING: 2,   // 'sending'
-  SENT: 3,      // 'sent'
-  FAILED: 4,    // 'failed'
-  RETRYING: 5,  // 'retrying'
+  QUEUED: 1, // 'queued'
+  SENDING: 2, // 'sending'
+  SENT: 3, // 'sent'
+  FAILED: 4, // 'failed'
+  RETRYING: 5, // 'retrying'
 } as const;
 
-export type NotificationStatusId = typeof NOTIFICATION_STATUSES[keyof typeof NOTIFICATION_STATUSES];
+export type NotificationStatusId =
+  (typeof NOTIFICATION_STATUSES)[keyof typeof NOTIFICATION_STATUSES];
 
 /**
  * Check if status ID is valid

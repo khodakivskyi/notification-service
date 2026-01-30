@@ -22,7 +22,7 @@ export interface CallbackOptions {
 export async function callCallback(
   callbackUrl: string,
   data: any,
-  options: CallbackOptions = {}
+  options: CallbackOptions = {},
 ): Promise<CallbackResponse> {
   try {
     const response = await httpClient.post(callbackUrl, data, options);

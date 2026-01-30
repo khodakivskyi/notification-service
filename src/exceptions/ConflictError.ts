@@ -12,7 +12,9 @@ export class ConflictError extends BaseError {
     this.field = field;
   }
 
-  toJSON(): { error: { name: string; message: string; statusCode: number; field?: string; timestamp: string } } {
+  toJSON(): {
+    error: { name: string; message: string; statusCode: number; field?: string; timestamp: string };
+  } {
     return {
       error: {
         name: this.name,

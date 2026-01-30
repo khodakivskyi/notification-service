@@ -9,7 +9,12 @@
     "copy:assets": "copyfiles -u 4 \"src/services/email/templates/**/*\" dist/services/email/templates",
     "start": "node dist/index.js",
     "start:workers": "node dist/workers.js",
-    "type-check": "tsc --noEmit"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "format:check": "prettier --check \"src/**/*.ts\""
   },
   "keywords": [],
   "author": "",
@@ -34,8 +39,12 @@
     "@types/nodemailer": "^7.0.9",
     "@types/pg": "^8.16.0",
     "@types/ws": "^8.18.1",
+    "@typescript-eslint/eslint-plugin": "^8.54.0",
+    "@typescript-eslint/parser": "^8.54.0",
     "copyfiles": "^2.4.1",
+    "eslint": "^9.39.2",
     "nodemon": "^3.1.11",
+    "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
   }

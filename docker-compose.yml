@@ -78,7 +78,7 @@ services:
     networks:
       - notification-network
     restart: unless-stopped
-    command: [ "node", "src/index.js" ]
+    command: [ "node", "dist/index.js" ]
 
   # ============================================
   # Email Workers
@@ -106,7 +106,7 @@ services:
     networks:
       - notification-network
     restart: unless-stopped
-    command: [ "node", "src/workers.js" ]  # Workers process
+    command: [ "node", "dist/workers.js" ]
     deploy:
       replicas: 2  # Workers count
 

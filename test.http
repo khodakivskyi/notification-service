@@ -1,9 +1,21 @@
+###
+GET http://localhost:3001/api/notifications/00b81614-3117-4bcd-9d79-cb6aecc0c02e
+Accept: application/json
+
+###
+GET http://localhost:3001/api/health
+Accept: application/json
+
+###
+GET http://localhost:3001/api/ready
+Accept: application/json
+
 ### Send verification email
 POST http://localhost:3001/api/notifications/send-verification
 Content-Type: application/json
 
 {
-  "email": "test@example.com",
+  "email": "insoleg918@gmail.com",
   "username": "TestUser",
-  "verificationLink": "https://example.com/verify/123"
+  "verificationLink": "https://example.com/verify/12345"
 }

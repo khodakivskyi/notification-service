@@ -1,12 +1,15 @@
 {
   "name": "notification-service",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
-    "dev": "nodemon src/index.js",
-    "dev:workers": "nodemon src/workers.js",
-    "start": "node src/index.js",
-    "start:workers": "node src/workers.js"
+    "dev": "nodemon --exec \"ts-node --transpile-only --files\" src/index.ts",
+    "dev:workers": "nodemon --exec \"ts-node --transpile-only --files\" src/workers.ts",
+    "build": "tsc && npm run copy:assets",
+    "copy:assets": "copyfiles -u 4 \"src/services/email/templates/**/*\" dist/services/email/templates",
+    "start": "node dist/index.js",
+    "start:workers": "node dist/workers.js",
+    "type-check": "tsc --noEmit"
   },
   "keywords": [],
   "author": "",
@@ -25,6 +28,15 @@
     "ws": "^8.19.0"
   },
   "devDependencies": {
-    "nodemon": "^3.1.11"
+    "@types/amqplib": "^0.10.8",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.1.0",
+    "@types/nodemailer": "^7.0.9",
+    "@types/pg": "^8.16.0",
+    "@types/ws": "^8.18.1",
+    "copyfiles": "^2.4.1",
+    "nodemon": "^3.1.11",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
   }
 }

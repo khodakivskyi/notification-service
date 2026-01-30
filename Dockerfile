@@ -1,3 +1,19 @@
+# ============================================
+# Build stage – compile TypeScript to dist/
+# ============================================
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+COPY package*.json tsconfig.json ./
+RUN npm ci
+
+COPY src ./src
+RUN npm run build
+
+# ============================================
+# Production stage – run compiled JS
+# ============================================
 FROM node:18-alpine
 
 WORKDIR /app
@@ -10,10 +26,8 @@ COPY package*.json ./
 
 RUN npm ci --only=production
 
-COPY . .
-
-RUN mkdir -p logs && \
-    chown -R nodejs:nodejs /app
+COPY --from=builder /app/dist ./dist
+RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 USER nodejs
 
@@ -24,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
     const req = require('http').get('http://localhost:3001/api/health', r => process.exit(r.statusCode === 200 ? 0 : 1)); \
     req.on('error', () => process.exit(1));"
 
-CMD ["node", "src/index.js"]
+CMD ["node", "dist/index.js"]

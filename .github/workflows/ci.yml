@@ -22,10 +22,7 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
-    - name: Run unit tests
-      run: npm test
-
-    - name: Start services with docker compose
+    - name: Create env variables
       run: |
         # Create test .env file
         cat > .env.test << EOF
@@ -49,6 +46,11 @@ jobs:
         APP_PORT=3001
         EOF
 
+    - name: Run unit tests
+      run: npm test
+
+    - name: Start services with docker compose
+      run: |
         # Start only app service with dependencies (db, rabbitmq)
         docker compose --env-file .env.test up -d --build db rabbitmq
         

@@ -1,7 +1,10 @@
-const path = require('path');
-const { defineConfig } = require('vitest/config');
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { defineConfig } from 'vitest/config';
 
-module.exports = defineConfig({
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

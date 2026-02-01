@@ -5,21 +5,31 @@ import logger from '../config/logger';
 import config from '../config/env';
 import { RateLimitError } from '../exceptions/';
 
-const redisClient = new Redis(config.rateLimiting.redisUrl);
+let rateLimiter;
 
-redisClient.on('connect', () => logger.info('Redis connected successfully.'));
-redisClient.on('error', (error) => logger.error('Redis connection error:', { error: error.message }));
+if (config.rateLimiting.redisUrl && config.rateLimiting.rateLimitEnabled) {
+  const redisClient = new Redis(config.rateLimiting.redisUrl);
 
-const rateLimiter = new RateLimiterRedis({
-  storeClient: redisClient,
-  points: config.rateLimiting.rateLimitPoints,
-  duration: config.rateLimiting.rateLimitDuration,
-  blockDuration: config.rateLimiting.rateLimitBlockDuration,
-  useRedisPackage: true,
-});
+  redisClient.on('connect', () => logger.info('Redis connected successfully.'));
+  redisClient.on('error', (error) => logger.error('Redis connection error:', { error: error.message }));
+
+  rateLimiter = new RateLimiterRedis({
+    storeClient: redisClient,
+    points: config.rateLimiting.rateLimitPoints,
+    duration: config.rateLimiting.rateLimitDuration,
+    blockDuration: config.rateLimiting.rateLimitBlockDuration,
+    useRedisPackage: true,
+  });
+} else {
+  rateLimiter = null;
+}
 
 const rateLimitHandler = (req: Request, _res: Response, next: NextFunction) => {
-  rateLimiter.consume(req.ip as string)
+  const skipPaths = ['/api/health', '/api/ready', '/favicon.ico'];
+  if (!rateLimiter || skipPaths.some((p) => req.path === p || req.path.startsWith(p))) return next();
+
+  const key = (req.headers['x-api-key'] as string) || req.ip || 'anonymous';
+  rateLimiter.consume(key)
     .then(() => {
       next();
     })

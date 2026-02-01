@@ -8,3 +8,4 @@ export { ServiceUnavailableError } from './ServiceUnavailableError';
 export { RateLimitError } from './RateLimitError';
 export { ConflictError } from './ConflictError';
 export { ForbiddenError } from './ForbiddenError';
+export { UnauthorizedError } from './UnauthorizedError';

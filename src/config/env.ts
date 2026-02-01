@@ -7,7 +7,6 @@ dotenv.config();
 // Define the schema for environment variables
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-
   PORT: Joi.number().default(3000),
 
   DATABASE_URL: Joi.string().uri().required(),
@@ -18,6 +17,12 @@ const envSchema = Joi.object({
   SMTP_PASS: Joi.string().required(),
 
   LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'debug').default('info'),
+
+  RATE_LIMIT_ENABLED: Joi.bool().default(false),
+  REDIS_URL: Joi.string().default('http://localhost:6379/'),
+  RATE_LIMIT_POINTS: Joi.number().default(10),
+  RATE_LIMIT_DURATION: Joi.number().default(5),
+  RATE_LIMIT_BLOCK_DURATION: Joi.number().default(60),
 
   RABBITMQ_URL: Joi.string().uri().default('amqp://guest:guest@localhost:5672'),
   EMAIL_QUEUE_NAME: Joi.string().default('email_notifications'),
@@ -41,6 +46,14 @@ export default {
 
   server: {
     port: env.PORT,
+  },
+
+  rateLimiting: {
+    rateLimitEnabled: env.RATE_LIMIT_ENABLED,
+    redisUrl: env.REDIS_URL,
+    rateLimitPoints: env.RATE_LIMIT_POINTS,
+    rateLimitDuration: env.RATE_LIMIT_DURATION,
+    rateLimitBlockDuration: env.RATE_LIMIT_BLOCK_DURATION,
   },
 
   database: {

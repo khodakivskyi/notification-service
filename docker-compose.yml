@@ -7,10 +7,12 @@ services:
   db:
     image: postgres:15-alpine
     container_name: notification-db
+    env_file:
+      - .env
     environment:
-      POSTGRES_USER: ${DB_USER:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_DB: ${DB_NAME:-notifications}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-notifications}
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
@@ -31,9 +33,11 @@ services:
   rabbitmq:
     image: rabbitmq:3-management-alpine
     container_name: notification-rabbitmq
+    env_file:
+      - .env
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-guest}
     ports:
       - "5672:5672"      # AMQP port
       - "15672:15672"    # Management UI
@@ -56,17 +60,8 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: notification-service
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - PORT=${PORT:-3001}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - DATABASE_URL=${DATABASE_URL}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-      - API_KEY=${API_KEY}
+    env_file:
+      - .env
     ports:
       - "${APP_PORT:-3001}:3001"
     volumes:
@@ -88,15 +83,8 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    environment:
-      - NODE_ENV=${NODE_ENV:-development}
-      - LOG_LEVEL=${LOG_LEVEL:-info}
-      - DATABASE_URL=${DATABASE_URL}
-      - SMTP_HOST=${SMTP_HOST}
-      - SMTP_PORT=${SMTP_PORT}
-      - SMTP_USER=${SMTP_USER}
-      - SMTP_PASS=${SMTP_PASS}
-      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    env_file:
+      - .env
     volumes:
       - ./logs:/app/logs
     depends_on:

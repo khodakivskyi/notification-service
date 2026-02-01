@@ -9,6 +9,7 @@ Accept: application/json
 ###
 GET http://localhost:3001/api/ready
 Accept: application/json
+#x-api-key: key here
 
 ### Send verification email
 POST http://localhost:3001/api/notifications/send-verification

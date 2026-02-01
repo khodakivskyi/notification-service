@@ -66,6 +66,7 @@ services:
       - SMTP_USER=${SMTP_USER}
       - SMTP_PASS=${SMTP_PASS}
       - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - API_KEY=${API_KEY}
     ports:
       - "${APP_PORT:-3001}:3001"
     volumes:

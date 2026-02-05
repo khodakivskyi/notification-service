@@ -43,7 +43,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npx semantic release
+          npx semantic-release
           echo "new_release_published=$?" >> GITHUB_OUTPUT
 
       - name: Get version from package.json

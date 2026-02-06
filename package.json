@@ -1,6 +1,6 @@
 {
   "name": "notification-service",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "scripts": {
     "init-hooks": "git config core.hooksPath .githooks",

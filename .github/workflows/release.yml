@@ -16,11 +16,11 @@ jobs:
       contents: write
       packages: write
       issues: write
-      pull_requests: write
+      pull-requests: write
 
     outputs:
-      new_release_published: ${{ steps.semantic.outputs.new_release_published }}
-      new_release_version: ${{ steps.semantic.outputs.new_release_version }}
+      new_release_published: ${{ steps.version.outputs.new_release_published }}
+      new_release_version: ${{ steps.version.outputs.version }}
 
     steps:
       - name: Checkout code
@@ -32,7 +32,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 24
           cache: 'npm'
 
       - name: Install dependencies
@@ -42,17 +42,20 @@ jobs:
         id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx semantic-release
-          echo "new_release_published=$?" >> GITHUB_OUTPUT
+        run: npx semantic-release
 
       - name: Get version from package.json
-        if: steps.semantic.outputs.new_release_published == 'true'
         id: version
         run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "[New version: $VERSION]"
+          if git describe --exact-match --tags HEAD 2>/dev/null; then
+            VERSION=$(node -p "require('./package.json').version")
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "new_release_published=true" >> $GITHUB_OUTPUT
+            echo "New version: $VERSION"
+          else
+            echo "new_release_published=false" >> $GITHUB_OUTPUT
+            echo "No new release"
+          fi
 
   docker:
     name: Build and Push docker image
@@ -105,12 +108,3 @@ jobs:
           platforms: linux/amd64,linux/arm64
           build-args: |
             VERSION=${{ needs.release.outputs.new_release_version }}
-
-      - name: Update Docker image description
-        uses: peter-evans/dockerhub-description@v3
-        continue-on-error: true
-        with:
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-          repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          short-description: ${{ github.event.repository.description }}

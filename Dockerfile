@@ -1,7 +1,7 @@
 # ============================================
 # Build stage – compile TypeScript to dist/
 # ============================================
-FROM node:18-alpine AS builder
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN npm run build
 # ============================================
 # Production stage – run compiled JS
 # ============================================
-FROM node:18-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 

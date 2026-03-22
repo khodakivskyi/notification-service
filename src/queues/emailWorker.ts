@@ -1,11 +1,12 @@
 import rabbitMQConnection from '../config/rabbitmq';
-import emailService from '../services/email/emailService';
+import emailService from '../services/emailService';
 import config from '../config/env';
 import logger from '../config/logger';
 import { NOTIFICATION_STATUSES } from '../constants/';
 import { ValidationError } from '../exceptions';
 import { callCallback } from '../utils/callback';
 import emailQueue, { EmailJob } from './emailQueue';
+import { Notification } from '../types/notification';
 import * as amqp from 'amqplib';
 
 class EmailWorker {
@@ -47,8 +48,8 @@ class EmailWorker {
         },
         { noAck: false },
       );
-    } catch (error: any) {
-      logger.error('Failed to start EmailWorker', { error: error.message });
+    } catch (error: unknown) {
+      logger.error('Failed to start EmailWorker', { error: error instanceof Error ? error.message : ''});
       throw error;
     }
   }
@@ -69,7 +70,7 @@ class EmailWorker {
     try {
       const skipped = await this.executeJob(job);
       await this.handleSuccess(job, msg, consumeChannel, startTime, { skipped });
-    } catch (error: any) {
+    } catch (error: unknown) {
       await this.handleError(job, error, msg, consumeChannel, publishChannel);
     }
   }
@@ -79,9 +80,9 @@ class EmailWorker {
 
     try {
       job = JSON.parse(msg.content.toString());
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Invalid JSON payload, dropping message', {
-        error: error.message,
+        error: error instanceof Error ? error.message : '',
         raw: msg.content.toString(),
       });
       consumeChannel.ack(msg);
@@ -107,32 +108,16 @@ class EmailWorker {
     if (!claimed) {
       logger.info('Notification already processed or claimed by another worker, skipping', {
         notificationId,
-        type: job.type,
       });
       return true;
     }
 
     logger.info('Processing job', {
-      type: job.type,
       timestamp: job.timestamp,
       notificationId,
     });
 
-    if (job.type === 'verification') {
-      await emailService.sendVerificationEmail(
-        job.data.to || job.data.email!,
-        job.data.username!,
-        job.data.verificationLink!,
-      );
-    } else if (job.type === 'notification') {
-      await emailService.sendNotification(
-        job.data.to || job.data.email!,
-        job.data.subject!,
-        job.data.message!,
-      );
-    } else {
-      throw new ValidationError('Unknown job type', { type: job.type });
-    }
+    await emailService.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
 
     await emailService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
     return false;
@@ -154,10 +139,10 @@ class EmailWorker {
           timestamp: notification.sentAt || notification.updatedAt,
           errorMessage: notification.errorMessage ?? null,
         });
-      } catch (callbackError: any) {
+      } catch (callbackError: unknown) {
         logger.warn('Callback failed', {
           callbackUrl: job.data.callbackUrl,
-          error: callbackError.message,
+          error: callbackError instanceof Error ? callbackError.message : '',
         });
       }
     }
@@ -165,21 +150,19 @@ class EmailWorker {
     consumeChannel.ack(msg);
     const duration = Date.now() - startTime;
     logger.info('Job processed successfully', {
-      type: job.type,
       duration: `${duration}ms`,
     });
   }
 
   async handleError(
     job: EmailJob,
-    error: any,
+    error: unknown,
     msg: amqp.ConsumeMessage,
     consumeChannel: amqp.Channel,
     publishChannel: amqp.ConfirmChannel,
   ): Promise<void> {
     logger.error('Job failed', {
-      type: job?.type,
-      error: error.message,
+      error: error instanceof Error ? error.message : '',
       retries: job?.retries || 0,
     });
 
@@ -201,22 +184,20 @@ class EmailWorker {
     } else {
       if (isNonRetriable) {
         logger.error('Non-retriable error, marking failed', {
-          type: job?.type,
-          error: error.message,
+          error: error instanceof Error ? error.message : '',
         });
       } else {
         logger.error('Max retries reached, marking failed', {
-          type: job?.type,
           retries: currentRetries,
           maxRetries,
-          error: error.message,
+          error: error instanceof Error ? error.message : '',
         });
       }
 
       await emailService.updateStatus(
         job.data.notificationId,
         NOTIFICATION_STATUSES.FAILED,
-        error.message,
+        error instanceof Error ? error.message : '',
       );
     }
 
@@ -224,10 +205,14 @@ class EmailWorker {
     if (job?.data?.callbackUrl && notificationId) {
       try {
         const notification = await emailService.getById(notificationId);
-        await this.sendCallback(job, notification, error.message);
-      } catch (readError) {
+        await this.sendCallback(job, notification, error instanceof Error ? error.message : '');
+      } catch {
         // fallback: send callback without notification object
-        await this.sendCallback(job, { id: notificationId } as any, error.message);
+        await this.sendCallback(
+          job,
+          { id: notificationId } as Notification,
+          error instanceof Error ? error.message : '',
+        );
       }
     }
 
@@ -242,16 +227,25 @@ class EmailWorker {
   }
 
   shouldRetry(
-    error: any,
+    error: unknown,
     currentRetries: number,
     maxRetries: number,
   ): {
     willRetry: boolean;
     isNonRetriable: boolean;
   } {
+    interface OperationalError extends Error {
+      isOperational?: boolean;
+      statusCode?: number;
+    }
+
+    function isOperationalError(err: unknown): err is OperationalError {
+      return typeof err === 'object' && err !== null && 'isOperational' in err;
+    }
+
     const isNonRetriable =
       error instanceof ValidationError ||
-      (error?.isOperational &&
+      (isOperationalError(error) &&
         typeof error.statusCode === 'number' &&
         error.statusCode >= 400 &&
         error.statusCode < 500);
@@ -288,7 +282,7 @@ class EmailWorker {
     return Math.min(baseDelay * 2 ** (retries - 1), maxDelay);
   }
 
-  async sendCallback(job: EmailJob, notification: any, errorMessage?: string): Promise<void> {
+  async sendCallback(job: EmailJob, notification: Notification, errorMessage?: string): Promise<void> {
     if (!job?.data?.callbackUrl) return;
 
     try {
@@ -298,7 +292,7 @@ class EmailWorker {
         timestamp: notification.sentAt || notification.updatedAt,
         errorMessage: errorMessage ?? notification.errorMessage ?? null,
       });
-    } catch (readOrCallbackError) {
+    } catch {
       try {
         await callCallback(job.data.callbackUrl, {
           notificationId: job.data.notificationId,
@@ -306,10 +300,10 @@ class EmailWorker {
           timestamp: new Date().toISOString(),
           errorMessage: errorMessage,
         });
-      } catch (callbackError: any) {
+      } catch (callbackError: unknown) {
         logger.warn('Callback failed on error', {
           callbackUrl: job.data.callbackUrl,
-          error: callbackError.message,
+          error: callbackError instanceof Error ? callbackError.message : '',
         });
       }
     }

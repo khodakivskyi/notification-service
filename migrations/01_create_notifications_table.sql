@@ -4,9 +4,7 @@
 create table if not exists notifications (
     id uuid primary key default gen_random_uuid(),
     "userId" uuid not null,
-    -- ('email', 'websocket', 'push')
-    "type" varchar(50) not null,
-    -- (email or websocket connection id)
+    -- email
     channel varchar(255) not null,
     -- subject (for email)
     subject varchar(500) not null,

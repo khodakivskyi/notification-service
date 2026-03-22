@@ -40,4 +40,4 @@ async function startWorkers(): Promise<void> {
   }
 }
 
-startWorkers();
+startWorkers().then();

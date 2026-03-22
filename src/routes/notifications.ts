@@ -1,61 +1,15 @@
 import express, { Request, Response, NextFunction } from 'express';
-import emailService from '../services/email/emailService';
+import emailService from '../services/emailService';
 import emailQueue from '../queues/emailQueue';
 import { ANONYMOUS_USER_ID } from '../constants';
 import validate from '../middleware/validate';
 import {
-  sendVerification,
   sendNotification,
   uuidParam,
   userIdParam,
 } from '../schemas/notificationSchemas';
 
 const router = express.Router();
-
-/**
- * POST /api/notifications/send-verification
- * Send verification email to user
- */
-router.post(
-  '/send-verification',
-  validate(sendVerification),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email, username, verificationLink, userId, subject, callbackUrl } = req.body;
-
-      const notification = await emailService.createNotification({
-        userId: userId || ANONYMOUS_USER_ID,
-        type: 'email',
-        channel: email,
-        subject: subject || 'Verify your email address',
-        content: `Verification link: ${verificationLink}`,
-        metadata: {
-          username,
-          verificationLink,
-          callbackUrl: callbackUrl || null,
-        },
-      });
-
-      await emailQueue.addVerificationEmail({
-        to: email,
-        username,
-        verificationLink,
-        userId,
-        notificationId: notification.id,
-        callbackUrl: callbackUrl || null,
-      });
-
-      res.status(202).json({
-        success: true,
-        message: 'Verification email queued for delivery',
-        notificationId: notification.id,
-        statusUrl: `/api/notifications/${notification.id}`,
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
 
 /**
  * POST /api/notifications/send
@@ -66,14 +20,13 @@ router.post(
   validate(sendNotification),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, subject, message, userId, callbackUrl } = req.body;
+      const { email, subject, htmlContent, userId, callbackUrl } = req.body;
 
       const notification = await emailService.createNotification({
         userId: userId || ANONYMOUS_USER_ID,
-        type: 'email',
         channel: email,
         subject: subject,
-        content: message,
+        content: htmlContent,
         metadata: {
           callbackUrl: callbackUrl || null,
         },
@@ -82,7 +35,7 @@ router.post(
       await emailQueue.addNotificationEmail({
         to: email,
         subject,
-        message,
+        htmlContent: htmlContent,
         userId,
         notificationId: notification.id,
         callbackUrl: callbackUrl || null,

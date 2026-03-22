@@ -1,14 +1,11 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import logger from '../../config/logger';
-import config from '../../config/env';
-import Handlebars from 'handlebars';
-import path from 'path';
-import { readFile } from 'fs/promises';
-import notificationRepository from '../../repositories/notificationRepository';
-import { isValidStatusId } from '../../constants/';
-import { NotFoundError, ValidationError, ForbiddenError } from '../../exceptions';
-import { validateEmail } from '../../helpers/';
-import { Notification, CreateNotificationInput, NotificationStats } from '../../types/notification';
+import logger from '../config/logger';
+import config from '../config/env';
+import notificationRepository from '../repositories/notificationRepository';
+import { isValidStatusId } from '../constants/';
+import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions';
+import { validateEmail } from '../helpers/';
+import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification';
 
 class EmailService {
   private transporter: Transporter;
@@ -27,81 +24,26 @@ class EmailService {
   }
 
   /**
-   * Render HTML template
-   * @param templateName - File name (without .hbs)
-   * @param data - Data to replace
-   */
-  async renderTemplate(templateName: string, data: Record<string, any>): Promise<string> {
-    try {
-      const templatePath = path.join(__dirname, 'templates', `${templateName}.hbs`);
-
-      const templateSource = await readFile(templatePath, 'utf-8');
-
-      const template = Handlebars.compile(templateSource);
-
-      return template(data);
-    } catch (err: any) {
-      logger.error('Failed to render email template', {
-        templateName,
-        error: err.message,
-      });
-      throw err;
-    }
-  }
-
-  /**
-   * Send verification email
-   * @param to - Recipient email
-   * @param username - Username
-   * @param verificationLink - Verification link
-   */
-  async sendVerificationEmail(
-    to: string,
-    username: string,
-    verificationLink: string,
-  ): Promise<void> {
-    try {
-      const html = await this.renderTemplate('verification', {
-        username,
-        verificationLink,
-      });
-
-      const mailOptions = {
-        from: config.smtp.user,
-        to: to,
-        subject: 'Verify your email',
-        html: html,
-      };
-
-      await this.transporter.sendMail(mailOptions);
-
-      logger.info('Verification email sent', { to });
-    } catch (error: any) {
-      logger.error('Error sending verification email', { to, error });
-      throw error;
-    }
-  }
-
-  /**
    * Send a regular message
    * @param to - Recipient email
    * @param subject - Subject
-   * @param message - message
+   * @param htmlContent - message
    */
-  async sendNotification(to: string, subject: string, message: string): Promise<void> {
+  async sendNotification(to: string, subject: string, htmlContent: string): Promise<void> {
     try {
+      validateEmail(to);
+
       const mailOptions = {
         from: config.smtp.user,
         to: to,
         subject: subject,
-        text: message,
-        html: `<p>${message}</p>`,
+        html: htmlContent,
       };
 
-      await this.transporter.sendMail(mailOptions);
+      this.transporter.sendMail(mailOptions);
 
       logger.info('Notification email sent', { to });
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error sending notification email', { to, error });
       throw error;
     }
@@ -114,21 +56,19 @@ class EmailService {
    */
   async createNotification({
     userId,
-    type,
     channel,
     subject,
     content,
     metadata = {},
   }: CreateNotificationInput): Promise<Notification> {
     // Validate email format if channel is email
-    // channel property is delivery address (email, websocket or sth else)
-    if (type === 'email' && channel) {
-      validateEmail(channel, type);
+    // channel property is delivery address (email)
+    if (channel) {
+      validateEmail(channel);
     }
 
     return await notificationRepository.create({
       userId,
-      type,
       channel,
       subject,
       content: content || null,

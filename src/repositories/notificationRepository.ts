@@ -11,7 +11,6 @@ class NotificationRepository {
    */
   async create({
     userId,
-    type,
     channel,
     subject,
     content,
@@ -20,20 +19,19 @@ class NotificationRepository {
     try {
       const result = await db.query<Notification>(
         `INSERT INTO notifications
-                     ("userId", "type", channel, subject, content, metadata)
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [userId, type, channel, subject, content, metadata],
+                     ("userId", channel, subject, content, metadata)
+                 VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [userId, channel, subject, content, metadata],
       );
 
       logger.info('Notification record created', {
         id: result.rows[0].id,
-        type,
         channel,
       });
 
       return result.rows[0];
-    } catch (error: any) {
-      logger.error('Error creating notification record', { error: error.message });
+    } catch (error: unknown) {
+      logger.error('Error creating notification record', { error: error instanceof Error ? error.message : '' });
       throw error;
     }
   }
@@ -71,15 +69,15 @@ class NotificationRepository {
           logger.info('Notification claimed for processing', { id });
         }
         return claimed;
-      } catch (error: any) {
-        logger.error('Error claiming notification for processing', { id, error: error.message });
+      } catch (error: unknown) {
+        logger.error('Error claiming notification for processing', { id, error: error instanceof Error ? error.message : '' });
         throw error;
       }
     } else {
       try {
         // If status is not FAILED, clear error message; if FAILED and errorMessage provided, set it
         const updates: string[] = ['"statusId" = $2'];
-        const params: any[] = [id, statusId];
+        const params: unknown[] = [id, statusId];
 
         if (statusId === NOTIFICATION_STATUSES.FAILED && errorMessage !== null) {
           updates.push('"errorMessage" = $3');
@@ -101,8 +99,8 @@ class NotificationRepository {
           statusId,
           hasError: errorMessage !== null,
         });
-      } catch (error: any) {
-        logger.error('Error updating notification status', { id, statusId, error: error.message });
+      } catch (error: unknown) {
+        logger.error('Error updating notification status', { id, statusId, error: error instanceof Error ? error.message : '' });
         throw error;
       }
     }
@@ -132,8 +130,8 @@ class NotificationRepository {
       );
 
       return result.rows;
-    } catch (error: any) {
-      logger.error('Error fetching notifications by user ID', { userId, error: error.message });
+    } catch (error: unknown) {
+      logger.error('Error fetching notifications by user ID', { userId, error: error instanceof Error ? error.message : '' });
       throw error;
     }
   }
@@ -171,24 +169,23 @@ class NotificationRepository {
   async getStatsByUserId(userId: string): Promise<NotificationStats[]> {
     try {
       const result = await db.query<NotificationStats>(
-        `SELECT n."type",
-                        ns.name as status,
+        `SELECT ns.name as status,
                         COUNT(*) ::int as count
                  FROM notifications n
                      LEFT JOIN notification_statuses ns
                  ON n."statusId" = ns.id
                  WHERE n."userId" = $1
-                 GROUP BY n."type", ns.name`,
+                 GROUP BY, ns.name`,
         [userId],
       );
 
       return result.rows;
-    } catch (err: any) {
+    } catch (error: unknown) {
       logger.error('Failed to fetch notification stats', {
         userId,
-        error: err.message,
+        error: error instanceof Error ? error.message : '',
       });
-      throw err;
+      throw error;
     }
   }
 

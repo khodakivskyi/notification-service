@@ -1,14 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import emailService from '../services/email/emailService';
+import emailService from '../services/emailService';
 import notificationRepository from '../repositories/notificationRepository';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions';
 import { NOTIFICATION_STATUSES } from '../constants/';
-
-vi.mock('../config/env', () => ({
-  default: {
-    smtp: { host: 'localhost', port: 587, user: 'test@test.com', pass: 'pass' },
-  },
-}));
 
 vi.mock('../config/logger', () => ({
   default: {
@@ -59,7 +53,6 @@ describe('emailService', () => {
 
       const result = await emailService.createNotification({
         userId: 'user-1',
-        type: 'email',
         channel: 'a@b.com',
         subject: 'Subj',
         content: 'Body',
@@ -68,7 +61,6 @@ describe('emailService', () => {
 
       expect(mockCreate).toHaveBeenCalledWith({
         userId: 'user-1',
-        type: 'email',
         channel: 'a@b.com',
         subject: 'Subj',
         content: 'Body',
@@ -81,7 +73,6 @@ describe('emailService', () => {
       await expect(
         emailService.createNotification({
           userId: 'user-1',
-          type: 'email',
           channel: 'invalid-email',
           subject: 'S',
           content: 'C',

@@ -3,19 +3,15 @@ import config from '../config/env';
 import logger from '../config/logger';
 
 export interface EmailJobData {
-  to?: string;
-  email?: string;
-  username?: string;
-  verificationLink?: string;
+  to: string;
   subject?: string;
-  message?: string;
+  htmlContent?: string;
   notificationId: string;
   callbackUrl?: string | null;
   userId?: string | null;
 }
 
 export interface EmailJob {
-  type: 'verification' | 'notification';
   data: EmailJobData;
   timestamp: number;
   retries: number;
@@ -77,35 +73,27 @@ class EmailQueue {
         dlx: config.rabbitmq.exchanges.dlx,
         dlq: config.rabbitmq.queues.emailDlq,
       });
-    } catch (error: any) {
-      logger.error('Failed to initialize email queue', { error: error.message });
+    } catch (error: unknown) {
+      logger.error('Failed to initialize email queue', { error: error instanceof Error ? error.message : ''});
       throw error;
     }
-  }
-
-  /**
-   * Add verification email to the queue
-   */
-  async addVerificationEmail(data: EmailJobData): Promise<boolean> {
-    return this.addJob('verification', data);
   }
 
   /**
    * Add generic notification to the queue
    */
   async addNotificationEmail(data: EmailJobData): Promise<boolean> {
-    return this.addJob('notification', data);
+    return this.addJob(data);
   }
 
   /**
    * Generic method for adding job
    */
-  async addJob(type: 'verification' | 'notification', data: EmailJobData): Promise<boolean> {
+  async addJob(data: EmailJobData): Promise<boolean> {
     try {
       const publishChannel = await rabbitMQConnection.getPublishChannel();
 
       const job: EmailJob = {
-        type,
         data,
         timestamp: Date.now(),
         retries: 0,
@@ -119,12 +107,11 @@ class EmailQueue {
       });
 
       await publishChannel.waitForConfirms();
-      logger.info('Job added to queue', { type, to: data.to || data.email });
+      logger.info('Job added to queue', { to: data.to });
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Failed to add job to queue', {
-        type,
-        error: error.message,
+        error: error instanceof Error ? error.message : null,
       });
       throw error;
     }
@@ -142,8 +129,8 @@ class EmailQueue {
         messageCount: queueInfo.messageCount,
         consumerCount: queueInfo.consumerCount,
       };
-    } catch (error: any) {
-      logger.error('Failed to get queue stats', { error: error.message });
+    } catch (error: unknown) {
+      logger.error('Failed to get queue stats', { error: error instanceof Error ? error.message : ''});
       return null;
     }
   }

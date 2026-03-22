@@ -20,7 +20,6 @@ module.exports = [
       '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/no-explicit-any': 'off',
-      'no-console': 'warn',
       semi: ['error', 'always'],
       quotes: ['error', 'single'],
       eqeqeq: ['error', 'always'],

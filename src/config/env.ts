@@ -43,7 +43,9 @@ const { error, value: env } = envSchema.validate(process.env);
 
 if (error) {
   console.error('Environment validation failed', { error: error });
-  process.exit(1);
+  if (process.env.NODE_ENV !== 'test') {
+    process.exit(1);
+  }
 }
 
 // Export valid variables

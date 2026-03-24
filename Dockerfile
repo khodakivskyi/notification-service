@@ -9,6 +9,7 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY src ./src
+COPY migrations ./migrations
 RUN npm run build
 
 # ============================================
@@ -27,6 +28,7 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/migrations ./migrations
 RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 USER nodejs

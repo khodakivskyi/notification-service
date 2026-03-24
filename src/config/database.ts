@@ -38,6 +38,23 @@ pool.on('error', (error: Error) => {
 // ========================================
 
 /**
+ * Initialize database connection
+ */
+export async function connect(): Promise<void> {
+  try {
+    const client = await pool.connect();
+    logger.info('✅ Database connection successful');
+    client.release();
+  } catch (error: unknown) {
+    logger.error('❌ Failed to connect to database', {
+      error: error instanceof Error ? error.message : '',
+      database_url: config.database.url,
+    });
+    throw error;
+  }
+}
+
+/**
  * Execute SQL query
  * @param text - SQL query
  * @param params - Parameters (for prepared statements)
@@ -60,11 +77,11 @@ export async function query<T extends Record<string, any> = any>(
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error executing query', {
       query: text,
-      error: error.message,
-      stack: error.stack,
+      error: error instanceof Error ? error.message : '',
+      stack: error instanceof Error ? error.stack : '',
     });
     throw error;
   }
@@ -75,9 +92,9 @@ export async function checkConnection(): Promise<boolean> {
   try {
     await pool.query('SELECT 1');
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Database connection check failed', {
-      error: error.message,
+      error: error instanceof Error ? error.message : '',
     });
     return false;
   }
@@ -88,15 +105,16 @@ export async function close(): Promise<void> {
   try {
     await pool.end();
     logger.info('Database pool has been closed');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error closing database pool', {
-      error: error.message,
+      error: error instanceof Error ? error.message : '',
     });
     throw error;
   }
 }
 
 export default {
+  connect,
   query,
   checkConnection,
   close,

@@ -12,6 +12,7 @@ async function startWorkers(): Promise<void> {
   try {
     logger.info('🚀 Starting workers...');
 
+    await db.connect();
     await rabbitMQConnection.connect();
     await emailQueue.init();
     await emailWorker.start();

@@ -1,7 +1,9 @@
+create schema if not exists notification_service;
+
 -- ========================================
 -- notifications table
 -- ========================================
-create table if not exists notifications (
+create table if not exists notification_service.notifications (
     id uuid primary key default gen_random_uuid(),
     "userId" uuid not null,
     -- email
@@ -25,16 +27,15 @@ create table if not exists notifications (
 -- ========================================
 -- indexes
 -- ========================================
-create index if not exists idx_notifications_user_id on notifications("userId");
-create index if not exists idx_notifications_status on notifications(status);
-create index if not exists idx_notifications_created_at on notifications("createdAt");
-create index if not exists idx_notifications_type on notifications("type");
-create index if not exists idx_notifications_user_created on notifications("userId", "createdAt" desc);
+create index if not exists idx_notifications_user_id on notification_service.notifications("userId");
+create index if not exists idx_notifications_status on notification_service.notifications(status);
+create index if not exists idx_notifications_created_at on notification_service.notifications("createdAt");
+create index if not exists idx_notifications_user_created on notification_service.notifications("userId", "createdAt" desc);
 
 -- ========================================
 -- trigger for auto updating updated_at
 -- ========================================
-create or replace function update_updated_at_column()
+create or replace function notification_service.update_updated_at_column()
 returns trigger as $$
 begin
 new."updatedAt" = now();
@@ -43,6 +44,6 @@ end;
 $$ language 'plpgsql';
 
 create trigger update_notifications_updated_at
-before update on notifications
+    before update on notification_service.notifications
     for each row
-    execute function update_updated_at_column();
+    execute function notification_service.update_updated_at_column();

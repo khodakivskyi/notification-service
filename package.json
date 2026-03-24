@@ -14,7 +14,10 @@
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "format:check": "prettier --check \"src/**/*.ts\""
+    "format:check": "prettier --check \"src/**/*.ts\"",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "migrate:status": "node-pg-migrate list"
   },
   "keywords": [],
   "author": "",
@@ -27,8 +30,9 @@
     "express": "^5.2.1",
     "ioredis": "^5.9.2",
     "joi": "^18.0.2",
+    "node-pg-migrate": "^8.0.4",
     "nodemailer": "^7.0.12",
-    "pg": "^8.17.1",
+    "pg": "^8.20.0",
     "rate-limiter-flexible": "^9.0.1",
     "winston": "^3.19.0",
     "ws": "^8.19.0"

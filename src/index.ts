@@ -5,10 +5,12 @@ import db from './config/database';
 import rabbitMQConnection from './config/rabbitmq';
 import emailQueue from './queues/emailQueue';
 import { Server } from 'http';
+import { runMigrations } from './utils/migrationRunner';
 
 const server: Server = app.listen(config.server.port, async () => {
   try {
-    // Connect RabbitMQ
+    await db.connect();
+    await runMigrations();
     await rabbitMQConnection.connect();
     await emailQueue.init();
 
@@ -16,8 +18,10 @@ const server: Server = app.listen(config.server.port, async () => {
       port: config.server.port,
       env: config.env,
     });
-  } catch (error: any) {
-    logger.error('❌ Failed to initialize RabbitMQ', { error });
+  } catch (error: unknown) {
+    logger.error('❌ Initialization failed', {
+      error: error instanceof Error ? error.stack : error,
+    });
     process.exit(1);
   }
 });
@@ -33,14 +37,14 @@ async function shutdown(): Promise<void> {
     try {
       await rabbitMQConnection.close();
       logger.info('✅ RabbitMQ connection closed');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error closing RabbitMQ connection', { error });
     }
 
     try {
       await db.close();
       logger.info('✅ Database pool closed');
-    } catch (error: any) {
+    } catch (error: unknown) {
       logger.error('Error closing database pool', { error });
     }
 

@@ -1,6 +1,6 @@
-import rabbitMQConnection from '../config/rabbitmq';
-import config from '../config/env';
-import logger from '../config/logger';
+import rabbitMQConnection from '../config/rabbitmq.js';
+import config from '../config/env.js';
+import logger from '../config/logger.js';
 
 export interface EmailJobData {
   to: string;

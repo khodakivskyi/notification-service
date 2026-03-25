@@ -1,6 +1,6 @@
-const { runner } = require('node-pg-migrate') as { runner: (options: object) => Promise<void> };
-import { migrationsConfig } from '../config/migrations';
-import logger from '../config/logger';
+import { runner } from 'node-pg-migrate';
+import { migrationsConfig } from '../config/migrations.js';
+import logger from '../config/logger.js';
 
 export async function runMigrations(): Promise<void> {
   try {

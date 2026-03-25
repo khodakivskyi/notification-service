@@ -1,7 +1,7 @@
-import db from '../config/database';
-import logger from '../config/logger';
-import { NOTIFICATION_STATUSES } from '../constants/';
-import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification';
+import db from '../config/database.js';
+import logger from '../config/logger.js';
+import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
 
 class NotificationRepository {
   /**

@@ -1,20 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import db from '../config/database';
-import notificationRepository from '../repositories/notificationRepository';
-import { NOTIFICATION_STATUSES } from '../constants/';
+import db from '../config/database.js';
+import notificationRepository from '../repositories/notificationRepository.js';
+import { NOTIFICATION_STATUSES } from '../constants/index.js';
 
 vi.stubGlobal('process', {
   ...process,
   exit: vi.fn(),
 });
 
-vi.mock('../config/database', () => ({
+vi.mock('../config/database.js', () => ({
   default: {
     query: vi.fn(),
   },
 }));
 
-vi.mock('../config/logger', () => ({
+vi.mock('../config/logger.js', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),

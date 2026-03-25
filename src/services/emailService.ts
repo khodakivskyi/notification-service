@@ -1,11 +1,11 @@
 import nodemailer, { Transporter } from 'nodemailer';
-import logger from '../config/logger';
-import config from '../config/env';
-import notificationRepository from '../repositories/notificationRepository';
-import { isValidStatusId } from '../constants/';
-import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions';
-import { validateEmail } from '../helpers/';
-import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification';
+import logger from '../config/logger.js';
+import config from '../config/env.js';
+import notificationRepository from '../repositories/notificationRepository.js';
+import { isValidStatusId } from '../constants/index.js';
+import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
+import { validateEmail } from '../helpers/index.js';
+import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
 
 class EmailService {
   private transporter: Transporter;

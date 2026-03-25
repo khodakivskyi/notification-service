@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import Redis from 'ioredis';
-import logger from '../config/logger';
-import config from '../config/env';
-import { RateLimitError, ServiceUnavailableError } from '../exceptions/';
+import { Redis } from 'ioredis';
+import logger from '../config/logger.js';
+import config from '../config/env.js';
+import { RateLimitError, ServiceUnavailableError } from '../exceptions/index.js';
 
 let rateLimiter: RateLimiterRedis | null = null;
 
@@ -11,7 +11,9 @@ if (config.rateLimiting.redisUrl && config.rateLimiting.rateLimitEnabled) {
   const redisClient = new Redis(config.rateLimiting.redisUrl);
 
   redisClient.on('connect', () => logger.info('Redis connected successfully.'));
-  redisClient.on('error', (error) => logger.error('Redis connection error:', { error: error.message }));
+  redisClient.on('error', (error: Error) =>
+    logger.error('Redis connection error:', { error: error.message }),
+  );
 
   // Use integers only
   const points = Math.floor(config.rateLimiting.rateLimitPoints) || 100;

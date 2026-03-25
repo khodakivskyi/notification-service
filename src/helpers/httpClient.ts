@@ -1,6 +1,6 @@
 import * as https from 'https';
 import * as http from 'http';
-import logger from '../config/logger';
+import logger from '../config/logger.js';
 
 export interface HttpClientOptions {
   timeout?: number;

@@ -1,11 +1,11 @@
-import app from './app';
-import config from './config/env';
-import logger from './config/logger';
-import db from './config/database';
-import rabbitMQConnection from './config/rabbitmq';
-import emailQueue from './queues/emailQueue';
+import app from './app.js';
+import config from './config/env.js';
+import logger from './config/logger.js';
+import db from './config/database.js';
+import rabbitMQConnection from './config/rabbitmq.js';
+import emailQueue from './queues/emailQueue.js';
 import { Server } from 'http';
-import { runMigrations } from './utils/migrationRunner';
+import { runMigrations } from './utils/migrationRunner.js';
 
 const server: Server = app.listen(config.server.port, async () => {
   try {

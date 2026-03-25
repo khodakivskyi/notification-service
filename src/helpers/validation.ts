@@ -1,4 +1,4 @@
-import { ValidationError } from '../exceptions';
+import { ValidationError } from '../exceptions/index.js';
 
 /**
  * Validate required fields in data object

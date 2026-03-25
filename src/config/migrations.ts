@@ -1,5 +1,5 @@
 import path from 'path';
-import config from './env';
+import config from './env.js';
 
 export const migrationsConfig = {
   databaseUrl: config.database.url,

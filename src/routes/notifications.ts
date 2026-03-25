@@ -1,13 +1,13 @@
 import express, { Request, Response, NextFunction } from 'express';
-import emailService from '../services/emailService';
-import emailQueue from '../queues/emailQueue';
-import { ANONYMOUS_USER_ID } from '../constants';
-import validate from '../middleware/validate';
+import emailService from '../services/emailService.js';
+import emailQueue from '../queues/emailQueue.js';
+import { ANONYMOUS_USER_ID } from '../constants/index.js';
+import validate from '../middleware/validate.js';
 import {
   sendNotification,
   uuidParam,
   userIdParam,
-} from '../schemas/notificationSchemas';
+} from '../schemas/notificationSchemas.js';
 
 const router = express.Router();
 

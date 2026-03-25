@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import emailService from '../services/emailService';
-import notificationRepository from '../repositories/notificationRepository';
-import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions';
-import { NOTIFICATION_STATUSES } from '../constants/';
+import emailService from '../services/emailService.js';
+import notificationRepository from '../repositories/notificationRepository.js';
+import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
+import { NOTIFICATION_STATUSES } from '../constants/index.js';
 
-vi.mock('../config/logger', () => ({
+vi.mock('../config/logger.js', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),
@@ -12,7 +12,7 @@ vi.mock('../config/logger', () => ({
   },
 }));
 
-vi.mock('../repositories/notificationRepository', () => ({
+vi.mock('../repositories/notificationRepository.js', () => ({
   default: {
     create: vi.fn(),
     updateStatus: vi.fn(),

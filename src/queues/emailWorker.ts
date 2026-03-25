@@ -1,12 +1,12 @@
-import rabbitMQConnection from '../config/rabbitmq';
-import emailService from '../services/emailService';
-import config from '../config/env';
-import logger from '../config/logger';
-import { NOTIFICATION_STATUSES } from '../constants/';
-import { ValidationError } from '../exceptions';
-import { callCallback } from '../utils/callback';
-import emailQueue, { EmailJob } from './emailQueue';
-import { Notification } from '../types/notification';
+import rabbitMQConnection from '../config/rabbitmq.js';
+import emailService from '../services/emailService.js';
+import config from '../config/env.js';
+import logger from '../config/logger.js';
+import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import { ValidationError } from '../exceptions/index.js';
+import { callCallback } from '../utils/callback.js';
+import emailQueue, { EmailJob } from './emailQueue.js';
+import { Notification } from '../types/notification.js';
 import * as amqp from 'amqplib';
 
 class EmailWorker {

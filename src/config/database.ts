@@ -1,6 +1,6 @@
 import { Pool, QueryResult, PoolClient } from 'pg';
-import logger from './logger';
-import config from './env';
+import logger from './logger.js';
+import config from './env.js';
 
 // Database Pool Configuration
 const pool = new Pool({

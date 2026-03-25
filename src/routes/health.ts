@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
-import db from '../config/database';
-import rabbitmq from '../config/rabbitmq';
+import db from '../config/database.js';
+import rabbitmq from '../config/rabbitmq.js';
 
 const router = express.Router();
 

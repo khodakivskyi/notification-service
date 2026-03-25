@@ -1,8 +1,8 @@
-import logger from './config/logger';
-import rabbitMQConnection from './config/rabbitmq';
-import emailQueue from './queues/emailQueue';
-import emailWorker from './queues/emailWorker';
-import db from './config/database';
+import logger from './config/logger.js';
+import rabbitMQConnection from './config/rabbitmq.js';
+import emailQueue from './queues/emailQueue.js';
+import emailWorker from './queues/emailWorker.js';
+import db from './config/database.js';
 
 /**
  * Workers Entry Point

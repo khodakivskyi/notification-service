@@ -1,5 +1,3 @@
-create schema if not exists notification_service;
-
 -- ========================================
 -- notification_statuses table
 -- ========================================

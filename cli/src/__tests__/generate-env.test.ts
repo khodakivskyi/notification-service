@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
+// @ts-ignore
 import { EnvAnswers, generateEnvFile, writeEnvFile } from '../commands/generate-env.js';
 
 const baseAnswers: EnvAnswers = {

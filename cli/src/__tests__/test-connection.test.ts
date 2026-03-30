@@ -48,7 +48,8 @@ describe('testConnections', () => {
 
     amqpConnectMock.mockRejectedValue(new Error('mq down'));
 
-    const { testConnections } = await import('../cli/commands/test-connection.js');
+    // @ts-ignore
+    const { testConnections } = await import('../commands/test-connection.js');
 
     const result = await testConnections({
       database: { url: 'postgres://x' },

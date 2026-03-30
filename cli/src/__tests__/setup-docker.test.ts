@@ -36,7 +36,8 @@ describe('setup-docker', () => {
       throw new Error('docker missing');
     });
 
-    const { startDockerContainers } = await import('../cli/commands/setup-docker.js');
+    // @ts-ignore
+    const { startDockerContainers } = await import('../commands/setup-docker.js');
     const result = await startDockerContainers();
 
     expect(result).toBe(false);
@@ -52,7 +53,7 @@ describe('setup-docker', () => {
       .mockImplementationOnce(() => undefined) // docker --version
       .mockImplementationOnce(() => undefined); // docker-compose up
 
-    const { startDockerContainers } = await import('../cli/commands/setup-docker.js');
+    const { startDockerContainers } = await import('../commands/setup-docker.js');
     const promise = startDockerContainers();
 
     await vi.advanceTimersByTimeAsync(3000);
@@ -75,7 +76,7 @@ describe('setup-docker', () => {
         throw new Error('compose failed');
       });
 
-    const { startDockerContainers } = await import('../cli/commands/setup-docker.js');
+    const { startDockerContainers } = await import('../commands/setup-docker.js');
     const result = await startDockerContainers();
 
     expect(result).toBe(false);
@@ -85,7 +86,7 @@ describe('setup-docker', () => {
   it('stopDockerContainers success logs success message', async () => {
     execSyncMock.mockImplementationOnce(() => undefined);
 
-    const { stopDockerContainers } = await import('../cli/commands/setup-docker.js');
+    const { stopDockerContainers } = await import('../commands/setup-docker.js');
     stopDockerContainers();
 
     expect(execSyncMock).toHaveBeenCalledWith('docker-compose down', { cwd: process.cwd() });
@@ -97,7 +98,7 @@ describe('setup-docker', () => {
       throw new Error('down failed');
     });
 
-    const { stopDockerContainers } = await import('../cli/commands/setup-docker.js');
+    const { stopDockerContainers } = await import('../commands/setup-docker.js');
     stopDockerContainers();
 
     expect(logMock).toHaveBeenCalled();

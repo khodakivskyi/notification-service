@@ -6,6 +6,7 @@ import { testConnections } from './test-connection.js';
 import { startDockerContainers } from './setup-docker.js';
 import type { SetupAnswers } from '../prompts/questions.js';
 import { generateDockerCompose, handleExistingDockerCompose } from './generate-docker-compose.js';
+import { generateApiKey } from '../utils/api-key-generator.js';
 
 interface InitOptions {
   dryRun?: boolean;
@@ -35,6 +36,10 @@ async function initCommand(options: InitOptions = {}): Promise<void> {
   try {
     console.log(chalk.bold('📋 Configuration Questions\n'));
     const answers = (await inquirer.prompt(setupQuestions)) as SetupAnswers;
+
+    if(answers.enableApiKey && !answers.apiKey) {
+      answers.apiKey = generateApiKey();
+    }
 
     let dockerComposeContent = '';
     if (answers.useDocker) {

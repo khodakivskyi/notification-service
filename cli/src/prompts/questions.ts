@@ -26,7 +26,6 @@ export interface SetupAnswers {
   smtpPort?: string;
   smtpUser: string;
   smtpPassword: string;
-  senderEmail: string;
 
   enableRateLimit: boolean;
   redisUrl?: string;
@@ -168,15 +167,13 @@ export const setupQuestions: DistinctQuestion<PromptState>[] = [
     when: (a: PromptState) => a.smtpProvider === 'custom',
     validate: isPort,
   },
-  { type: 'input', name: 'smtpUser', message: 'SMTP username/email:' },
-  { type: 'password', name: 'smtpPassword', message: 'SMTP password:' },
   {
     type: 'input',
-    name: 'senderEmail',
-    message: 'Sender email:',
-    default: 'noreply@example.com',
+    name: 'smtpUser',
+    message: 'SMTP email (your-email@gmail.com):',
     validate: isEmail,
   },
+  { type: 'password', name: 'smtpPassword', message: 'SMTP password:' },
 
   { type: 'confirm', name: 'enableRateLimit', message: 'Enable rate limiting?', default: false },
   {

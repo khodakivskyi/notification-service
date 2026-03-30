@@ -97,7 +97,7 @@ describe('initCommand', () => {
   it('should exit when writeEnvFile returns false', async () => {
     writeEnvFileMock.mockReturnValue(false);
 
-    const mod = await import('../cli/commands/init.js');
+    const mod = await import('../src/commands/init.js');
     await mod.default({ dryRun: false });
 
     expect(processExitSpy).toHaveBeenCalledWith(1);

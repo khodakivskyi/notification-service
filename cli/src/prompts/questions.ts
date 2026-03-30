@@ -35,7 +35,6 @@ export interface SetupAnswers {
   apiKey?: string;
 
   startDocker?: boolean;
-  runMigrations: boolean;
 }
 
 type PromptState = Partial<SetupAnswers>;
@@ -203,5 +202,4 @@ export const setupQuestions: DistinctQuestion<PromptState>[] = [
     default: true,
     when: (a: PromptState) => !!a.useDocker,
   },
-  { type: 'confirm', name: 'runMigrations', message: 'Run database migrations?', default: true },
 ];

@@ -4,7 +4,6 @@ import { setupQuestions } from '../prompts/questions.js';
 import { generateEnvFile, writeEnvFile } from './generate-env.js';
 import { testConnections } from './test-connection.js';
 import { startDockerContainers } from './setup-docker.js';
-import ora from 'ora';
 import type { SetupAnswers } from '../prompts/questions.js';
 import { generateDockerCompose, handleExistingDockerCompose } from './generate-docker-compose.js';
 
@@ -133,22 +132,6 @@ async function initCommand(options: InitOptions = {}): Promise<void> {
       console.log(
         chalk.yellow('⚠️  Some services are not ready yet. They may take a moment to start.'),
       );
-    }
-
-    if (answers.runMigrations && connections.database) {
-      console.log(chalk.bold('\n🔄 Running Database Migrations\n'));
-      const migrationSpinner = ora('Applying migrations...').start();
-      try {
-        const { runMigrations } = await import('../../utils/migrationRunner.js');
-        await runMigrations();
-        migrationSpinner.succeed(chalk.green('✓ Migrations completed'));
-      } catch (error: unknown) {
-        migrationSpinner.fail(
-          chalk.red(
-            `✗ Migration failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          ),
-        );
-      }
     }
 
     showSummary(answers, connections);

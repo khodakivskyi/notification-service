@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
-import { EnvAnswers, generateEnvFile, writeEnvFile } from '../cli/commands/generate-env.js';
+import { EnvAnswers, generateEnvFile, writeEnvFile } from '../commands/generate-env.js';
 
 const baseAnswers: EnvAnswers = {
   projectName: 'My Notification Service',

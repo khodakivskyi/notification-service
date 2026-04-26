@@ -1,7 +1,7 @@
 import logger from './config/logger.js';
 import rabbitMQConnection from './config/rabbitmq.js';
 import emailQueue from './queues/emailQueue.js';
-import emailWorker from './queues/emailWorker.js';
+import { emailWorker } from './container.js';
 import db from './config/database.js';
 
 /**

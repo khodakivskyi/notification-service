@@ -4,7 +4,7 @@ import config from '../config/env.js';
 import { validateEmail } from '../helpers/index.js';
 import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
 
-class EmailTransport implements IEmailTransport {
+export class EmailTransport implements IEmailTransport {
   private transporter: Transporter;
 
   constructor() {
@@ -46,5 +46,3 @@ class EmailTransport implements IEmailTransport {
     }
   }
 }
-
-export default new EmailTransport();

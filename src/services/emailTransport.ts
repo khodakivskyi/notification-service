@@ -2,8 +2,9 @@ import nodemailer, { Transporter } from 'nodemailer';
 import logger from '../config/logger.js';
 import config from '../config/env.js';
 import { validateEmail } from '../helpers/index.js';
+import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
 
-class EmailTransport {
+class EmailTransport implements IEmailTransport {
   private transporter: Transporter;
 
   constructor() {

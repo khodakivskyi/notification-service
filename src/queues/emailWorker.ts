@@ -10,12 +10,17 @@ import emailQueue, { EmailJob } from './emailQueue.js';
 import { Notification } from '../types/notification.js';
 import * as amqp from 'amqplib';
 import emailTransport from '../services/emailTransport.js';
+import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
+import type { INotificationService } from '../interfaces/INotificationService.js';
 
-class EmailWorker {
+export class EmailWorker {
   private readonly queueName: string;
   private isRunning: boolean;
 
-  constructor() {
+  constructor(
+    private readonly notifications: INotificationService,
+    private readonly mail: IEmailTransport,
+  ) {
     this.queueName = config.rabbitmq.queues.email;
     this.isRunning = false;
   }
@@ -106,7 +111,7 @@ class EmailWorker {
    */
   async executeJob(job: EmailJob): Promise<boolean> {
     const notificationId = job.data.notificationId;
-    const claimed = await notificationService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
+    const claimed = await this.notifications.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
     if (!claimed) {
       logger.info('Notification already processed or claimed by another worker, skipping', {
         notificationId,
@@ -119,9 +124,9 @@ class EmailWorker {
       notificationId,
     });
 
-    await emailTransport.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
+    await this.mail.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
 
-    await notificationService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
+    await this.notifications.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
     return false;
   }
 
@@ -134,7 +139,7 @@ class EmailWorker {
   ): Promise<void> {
     if (!skipped && job.data.callbackUrl) {
       try {
-        const notification = await notificationService.getById(job.data.notificationId);
+        const notification = await this.notifications.getById(job.data.notificationId);
         await callCallback(job.data.callbackUrl, {
           notificationId: notification.id,
           status: notification.status,
@@ -180,7 +185,7 @@ class EmailWorker {
         maxRetries,
       });
 
-      await notificationService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
+      await this.notifications.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
 
       job.retries = currentRetries + 1;
     } else {
@@ -196,7 +201,7 @@ class EmailWorker {
         });
       }
 
-      await notificationService.updateStatus(
+      await this.notifications.updateStatus(
         job.data.notificationId,
         NOTIFICATION_STATUSES.FAILED,
         getErrorMessage(error),
@@ -206,7 +211,7 @@ class EmailWorker {
     // Evoke callback (if exists)
     if (job?.data?.callbackUrl && notificationId) {
       try {
-        const notification = await notificationService.getById(notificationId);
+        const notification = await this.notifications.getById(notificationId);
         await this.sendCallback(job, notification, getErrorMessage(error));
       } catch {
         // fallback: send callback without notification object
@@ -320,6 +325,5 @@ class EmailWorker {
   }
 }
 
-// Export as singleton
-const emailWorker = new EmailWorker();
+const emailWorker = new EmailWorker(notificationService, emailTransport);
 export default emailWorker;

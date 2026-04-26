@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as amqp from 'amqplib';
 import { ValidationError } from '../exceptions/index.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
-import notificationService from '../services/notificationService.js';
-import emailTransport from '../services/emailTransport.js';
 import { callCallback } from '../utils/callback.js';
 import config from '../config/env.js';
-import emailWorker from '../queues/emailWorker.js';
-import type { EmailJob } from '../queues/emailQueue.js';
+import { EmailWorker } from '../queues/emailWorker.js';
+import type { EmailJob, EmailJobData } from '../queues/emailQueue.js';
+import type { INotificationService } from '../interfaces/INotificationService.js';
+import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
 
 vi.mock('../config/logger.js', () => ({
   default: {
@@ -18,29 +18,29 @@ vi.mock('../config/logger.js', () => ({
   },
 }));
 
-vi.mock('../services/notificationService.js', () => ({
-  default: {
-    updateStatus: vi.fn(),
-    getById: vi.fn(),
-  },
-}));
-
-vi.mock('../services/emailTransport.js', () => ({
-  default: {
-    sendNotification: vi.fn(),
-  },
-}));
-
 vi.mock('../utils/callback.js', () => ({
   callCallback: vi.fn().mockResolvedValue(undefined),
 }));
 
-const mockUpdateStatus = vi.mocked(notificationService.updateStatus);
-const mockGetById = vi.mocked(notificationService.getById);
-const mockSendNotification = vi.mocked(emailTransport.sendNotification);
 const mockCallCallback = vi.mocked(callCallback);
 
-function sampleJob(overrides: Partial<EmailJob> = {}): EmailJob {
+function createMockNotificationService(): INotificationService {
+  return {
+    createNotification: vi.fn(),
+    updateStatus: vi.fn(),
+    getById: vi.fn(),
+    getStatsByUserId: vi.fn(),
+  };
+}
+
+function createMockMail(): IEmailTransport {
+  return {
+    sendNotification: vi.fn(),
+  };
+}
+
+function sampleJob(overrides: Partial<Omit<EmailJob, 'data'>> & { data?: Partial<EmailJobData> } = {}): EmailJob {
+  const { data: dataOverrides, ...rest } = overrides;
   return {
     data: {
       to: 'a@b.com',
@@ -48,18 +48,24 @@ function sampleJob(overrides: Partial<EmailJob> = {}): EmailJob {
       htmlContent: '<p>h</p>',
       notificationId: 'n-1',
       callbackUrl: null,
-      ...overrides.data,
+      ...dataOverrides,
     },
     timestamp: Date.now(),
     retries: 0,
-    ...overrides,
+    ...rest,
   };
 }
 
 describe('emailWorker', () => {
+  let notifications: INotificationService;
+  let mail: IEmailTransport;
+  let worker: EmailWorker;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    void emailWorker.stop();
+    notifications = createMockNotificationService();
+    mail = createMockMail();
+    worker = new EmailWorker(notifications, mail);
   });
 
   describe('parseAndValidateMessage', () => {
@@ -68,7 +74,7 @@ describe('emailWorker', () => {
       const ch = { ack } as unknown as amqp.Channel;
       const msg = { content: Buffer.from('not-json') } as amqp.ConsumeMessage;
 
-      const result = emailWorker.parseAndValidateMessage(msg, ch);
+      const result = worker.parseAndValidateMessage(msg, ch);
 
       expect(result).toBeNull();
       expect(ack).toHaveBeenCalledWith(msg);
@@ -81,7 +87,7 @@ describe('emailWorker', () => {
         content: Buffer.from(JSON.stringify({ data: { to: 'a@b.com' } })),
       } as amqp.ConsumeMessage;
 
-      const result = emailWorker.parseAndValidateMessage(msg, ch);
+      const result = worker.parseAndValidateMessage(msg, ch);
 
       expect(result).toBeNull();
       expect(ack).toHaveBeenCalledWith(msg);
@@ -93,7 +99,7 @@ describe('emailWorker', () => {
       const job = sampleJob();
       const msg = { content: Buffer.from(JSON.stringify(job)) } as amqp.ConsumeMessage;
 
-      const result = emailWorker.parseAndValidateMessage(msg, ch);
+      const result = worker.parseAndValidateMessage(msg, ch);
 
       expect(result).toEqual(job);
       expect(ack).not.toHaveBeenCalled();
@@ -102,61 +108,61 @@ describe('emailWorker', () => {
 
   describe('executeJob', () => {
     it('returns true and skips send when claim fails', async () => {
-      mockUpdateStatus.mockResolvedValueOnce(false);
+      vi.mocked(notifications.updateStatus).mockResolvedValueOnce(false);
 
       const job = sampleJob();
-      const skipped = await emailWorker.executeJob(job);
+      const skipped = await worker.executeJob(job);
 
       expect(skipped).toBe(true);
-      expect(mockUpdateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
-      expect(mockSendNotification).not.toHaveBeenCalled();
+      expect(notifications.updateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
+      expect(mail.sendNotification).not.toHaveBeenCalled();
     });
 
     it('sends mail and marks SENT when claim succeeds', async () => {
-      mockUpdateStatus.mockResolvedValueOnce(true);
-      mockSendNotification.mockResolvedValueOnce(undefined);
-      mockUpdateStatus.mockResolvedValueOnce(undefined);
+      vi.mocked(notifications.updateStatus).mockResolvedValueOnce(true);
+      vi.mocked(mail.sendNotification).mockResolvedValueOnce(undefined);
+      vi.mocked(notifications.updateStatus).mockResolvedValueOnce(undefined);
 
       const job = sampleJob();
-      const skipped = await emailWorker.executeJob(job);
+      const skipped = await worker.executeJob(job);
 
       expect(skipped).toBe(false);
-      expect(mockSendNotification).toHaveBeenCalledWith(job.data.to, job.data.subject, job.data.htmlContent);
-      expect(mockUpdateStatus).toHaveBeenLastCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
+      expect(mail.sendNotification).toHaveBeenCalledWith(job.data.to, job.data.subject, job.data.htmlContent);
+      expect(notifications.updateStatus).toHaveBeenLastCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
     });
   });
 
   describe('shouldRetry', () => {
     it('does not retry ValidationError', () => {
-      const r = emailWorker.shouldRetry(new ValidationError('x'), 0, 3);
+      const r = worker.shouldRetry(new ValidationError('x'), 0, 3);
       expect(r.isNonRetriable).toBe(true);
       expect(r.willRetry).toBe(false);
     });
 
     it('does not retry operational 4xx errors', () => {
       const err = Object.assign(new Error('bad req'), { isOperational: true, statusCode: 422 });
-      const r = emailWorker.shouldRetry(err, 0, 3);
+      const r = worker.shouldRetry(err, 0, 3);
       expect(r.isNonRetriable).toBe(true);
       expect(r.willRetry).toBe(false);
     });
 
     it('retries generic errors while under maxRetries', () => {
-      const r = emailWorker.shouldRetry(new Error('timeout'), 0, 3);
+      const r = worker.shouldRetry(new Error('timeout'), 0, 3);
       expect(r.isNonRetriable).toBe(false);
       expect(r.willRetry).toBe(true);
     });
 
     it('stops retrying when currentRetries reaches maxRetries', () => {
-      const r = emailWorker.shouldRetry(new Error('timeout'), 3, 3);
+      const r = worker.shouldRetry(new Error('timeout'), 3, 3);
       expect(r.willRetry).toBe(false);
     });
   });
 
   describe('getRetryDelay', () => {
     it('exponential backoff with cap', () => {
-      expect(emailWorker.getRetryDelay(1)).toBe(1000);
-      expect(emailWorker.getRetryDelay(2)).toBe(2000);
-      expect(emailWorker.getRetryDelay(10)).toBe(60_000);
+      expect(worker.getRetryDelay(1)).toBe(1000);
+      expect(worker.getRetryDelay(2)).toBe(2000);
+      expect(worker.getRetryDelay(10)).toBe(60_000);
     });
   });
 
@@ -167,7 +173,7 @@ describe('emailWorker', () => {
       const job = sampleJob({ data: { callbackUrl: 'https://cb.example/hook' } });
       const msg = {} as amqp.ConsumeMessage;
 
-      await emailWorker.handleSuccess(job, msg, ch, Date.now(), { skipped: true });
+      await worker.handleSuccess(job, msg, ch, Date.now(), { skipped: true });
 
       expect(ack).toHaveBeenCalledWith(msg);
       expect(mockCallCallback).not.toHaveBeenCalled();
@@ -178,7 +184,7 @@ describe('emailWorker', () => {
       const ch = { ack } as unknown as amqp.Channel;
       const job = sampleJob({ data: { callbackUrl: 'https://cb.example/hook' } });
       const msg = {} as amqp.ConsumeMessage;
-      mockGetById.mockResolvedValueOnce({
+      vi.mocked(notifications.getById).mockResolvedValueOnce({
         id: job.data.notificationId,
         userId: 'u1',
         channel: job.data.to,
@@ -194,7 +200,7 @@ describe('emailWorker', () => {
         sentAt: new Date(),
       } as never);
 
-      await emailWorker.handleSuccess(job, msg, ch, Date.now(), { skipped: false });
+      await worker.handleSuccess(job, msg, ch, Date.now(), { skipped: false });
 
       expect(mockCallCallback).toHaveBeenCalledWith(
         'https://cb.example/hook',
@@ -215,11 +221,11 @@ describe('emailWorker', () => {
 
       const job = sampleJob();
       const msg = {} as amqp.ConsumeMessage;
-      mockUpdateStatus.mockResolvedValue(undefined);
+      vi.mocked(notifications.updateStatus).mockResolvedValue(undefined);
 
-      await emailWorker.handleError(job, new Error('smtp down'), msg, consumeChannel, publishChannel);
+      await worker.handleError(job, new Error('smtp down'), msg, consumeChannel, publishChannel);
 
-      expect(mockUpdateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
+      expect(notifications.updateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
       expect(sendToQueue).toHaveBeenCalledWith(
         config.rabbitmq.queues.emailRetry,
         expect.any(Buffer),
@@ -240,11 +246,11 @@ describe('emailWorker', () => {
 
       const job = sampleJob();
       const msg = {} as amqp.ConsumeMessage;
-      mockUpdateStatus.mockResolvedValue(undefined);
+      vi.mocked(notifications.updateStatus).mockResolvedValue(undefined);
 
-      await emailWorker.handleError(job, new ValidationError('bad'), msg, consumeChannel, publishChannel);
+      await worker.handleError(job, new ValidationError('bad'), msg, consumeChannel, publishChannel);
 
-      expect(mockUpdateStatus).toHaveBeenCalledWith(
+      expect(notifications.updateStatus).toHaveBeenCalledWith(
         job.data.notificationId,
         NOTIFICATION_STATUSES.FAILED,
         'bad',

@@ -1,5 +1,4 @@
 import rabbitMQConnection from '../config/rabbitmq.js';
-import notificationService from '../services/notificationService.js';
 import config from '../config/env.js';
 import logger from '../config/logger.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
@@ -9,7 +8,6 @@ import { callCallback } from '../utils/callback.js';
 import emailQueue, { EmailJob } from './emailQueue.js';
 import { Notification } from '../types/notification.js';
 import * as amqp from 'amqplib';
-import emailTransport from '../services/emailTransport.js';
 import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
 import type { INotificationService } from '../interfaces/INotificationService.js';
 
@@ -324,6 +322,3 @@ export class EmailWorker {
     logger.info('Email worker stopped');
   }
 }
-
-const emailWorker = new EmailWorker(notificationService, emailTransport);
-export default emailWorker;

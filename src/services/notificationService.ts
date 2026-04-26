@@ -1,4 +1,3 @@
-import { notificationRepository } from '../repositories/notificationRepository.js';
 import { isValidStatusId } from '../constants/index.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
 import { validateEmail } from '../helpers/index.js';
@@ -68,6 +67,3 @@ export class NotificationService implements INotificationService {
     return stats || [];
   }
 }
-
-export const notificationService = new NotificationService(notificationRepository);
-export default notificationService;

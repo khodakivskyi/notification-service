@@ -214,6 +214,3 @@ export class NotificationRepository implements INotificationRepository {
         }
     }*/
 }
-
-export const notificationRepository = new NotificationRepository();
-export default notificationRepository;

@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import db from '../config/database.js';
-import notificationRepository from '../repositories/notificationRepository.js';
+import { NotificationRepository } from '../repositories/notificationRepository.js';
+
+const notificationRepository = new NotificationRepository();
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
 
 vi.stubGlobal('process', {

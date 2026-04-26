@@ -1,5 +1,5 @@
 import express, { Request, Response, NextFunction } from 'express';
-import notificationService from '../services/notificationService.js';
+import { notificationService } from '../container.js';
 import emailQueue from '../queues/emailQueue.js';
 import { ANONYMOUS_USER_ID } from '../constants/index.js';
 import validate from '../middleware/validate.js';

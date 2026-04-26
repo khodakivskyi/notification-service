@@ -1,10 +1,11 @@
 import db from '../config/database.js';
 import logger from '../config/logger.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import type { INotificationRepository } from '../interfaces/INotificationRepository.js';
 import { getErrorMessage } from '../helpers/index.js';
 import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
 
-class NotificationRepository {
+export class NotificationRepository implements INotificationRepository {
   /**
    * Create a new notification record
    * @param notification - Notification data
@@ -214,5 +215,5 @@ class NotificationRepository {
     }*/
 }
 
-// Export as singleton
-export default new NotificationRepository();
+export const notificationRepository = new NotificationRepository();
+export default notificationRepository;

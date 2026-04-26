@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import notificationService from '../services/notificationService.js';
-import notificationRepository from '../repositories/notificationRepository.js';
+import { NotificationService } from '../services/notificationService.js';
+import type { INotificationRepository } from '../interfaces/INotificationRepository.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
 
@@ -12,23 +12,24 @@ vi.mock('../config/logger.js', () => ({
   },
 }));
 
-vi.mock('../repositories/notificationRepository.js', () => ({
-  default: {
+function createMockRepository(): INotificationRepository {
+  return {
     create: vi.fn(),
     updateStatus: vi.fn(),
     getById: vi.fn(),
+    getByUserId: vi.fn(),
     getStatsByUserId: vi.fn(),
-  },
-}));
-
-const mockCreate = vi.mocked(notificationRepository.create);
-const mockUpdateStatus = vi.mocked(notificationRepository.updateStatus);
-const mockGetById = vi.mocked(notificationRepository.getById);
-const mockGetStatsByUserId = vi.mocked(notificationRepository.getStatsByUserId);
+  };
+}
 
 describe('notificationService', () => {
+  let repository: INotificationRepository;
+  let service: NotificationService;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    repository = createMockRepository();
+    service = new NotificationService(repository);
   });
 
   describe('createNotification', () => {
@@ -49,9 +50,9 @@ describe('notificationService', () => {
         sentAt: null,
       };
 
-      mockCreate.mockResolvedValueOnce(created);
+      vi.mocked(repository.create).mockResolvedValueOnce(created);
 
-      const result = await notificationService.createNotification({
+      const result = await service.createNotification({
         userId: 'user-1',
         channel: 'a@b.com',
         subject: 'Subj',
@@ -59,7 +60,7 @@ describe('notificationService', () => {
         metadata: {},
       });
 
-      expect(mockCreate).toHaveBeenCalledWith({
+      expect(repository.create).toHaveBeenCalledWith({
         userId: 'user-1',
         channel: 'a@b.com',
         subject: 'Subj',
@@ -71,29 +72,29 @@ describe('notificationService', () => {
 
     it('throws ValidationError for invalid email when type is email', async () => {
       await expect(
-        notificationService.createNotification({
+        service.createNotification({
           userId: 'user-1',
           channel: 'invalid-email',
           subject: 'S',
           content: 'C',
         }),
       ).rejects.toThrow(ValidationError);
-      expect(mockCreate).not.toHaveBeenCalled();
+      expect(repository.create).not.toHaveBeenCalled();
     });
   });
 
   describe('updateStatus', () => {
     it('calls repository.updateStatus for valid statusId', async () => {
-      mockUpdateStatus.mockResolvedValueOnce(undefined);
+      vi.mocked(repository.updateStatus).mockResolvedValueOnce(undefined);
 
-      await notificationService.updateStatus('id-1', NOTIFICATION_STATUSES.SENT);
+      await service.updateStatus('id-1', NOTIFICATION_STATUSES.SENT);
 
-      expect(mockUpdateStatus).toHaveBeenCalledWith('id-1', NOTIFICATION_STATUSES.SENT, null);
+      expect(repository.updateStatus).toHaveBeenCalledWith('id-1', NOTIFICATION_STATUSES.SENT, null);
     });
 
     it('throws NotFoundError for invalid statusId', async () => {
-      await expect(notificationService.updateStatus('id-1', 999)).rejects.toThrow(NotFoundError);
-      expect(mockUpdateStatus).not.toHaveBeenCalled();
+      await expect(service.updateStatus('id-1', 999)).rejects.toThrow(NotFoundError);
+      expect(repository.updateStatus).not.toHaveBeenCalled();
     });
   });
 
@@ -116,27 +117,27 @@ describe('notificationService', () => {
         sentAt: new Date(),
       };
 
-      mockGetById.mockResolvedValueOnce(notification);
+      vi.mocked(repository.getById).mockResolvedValueOnce(notification);
 
-      const result = await notificationService.getById('id-1');
+      const result = await service.getById('id-1');
 
-      expect(mockGetById).toHaveBeenCalledWith('id-1');
+      expect(repository.getById).toHaveBeenCalledWith('id-1');
       expect(result).toEqual(notification);
     });
 
     it('throws ValidationError when id is empty', async () => {
-      await expect(notificationService.getById('')).rejects.toThrow(ValidationError);
-      expect(mockGetById).not.toHaveBeenCalled();
+      await expect(service.getById('')).rejects.toThrow(ValidationError);
+      expect(repository.getById).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundError when notification not found', async () => {
-      mockGetById.mockResolvedValueOnce(null);
+      vi.mocked(repository.getById).mockResolvedValueOnce(null);
 
-      await expect(notificationService.getById('missing-id')).rejects.toThrow(NotFoundError);
+      await expect(service.getById('missing-id')).rejects.toThrow(NotFoundError);
     });
 
     it('throws ForbiddenError when userId does not match notification userId', async () => {
-      mockGetById.mockResolvedValueOnce({
+      vi.mocked(repository.getById).mockResolvedValueOnce({
         id: 'id-1',
         userId: 'user-A',
         type: 'email',
@@ -152,24 +153,24 @@ describe('notificationService', () => {
         sentAt: null,
       } as any);
 
-      await expect(notificationService.getById('id-1', 'user-B')).rejects.toThrow(ForbiddenError);
+      await expect(service.getById('id-1', 'user-B')).rejects.toThrow(ForbiddenError);
     });
   });
 
   describe('getStatsByUserId', () => {
     it('returns stats from repository', async () => {
-      const stats = [{ type: 'email' as const, status: 'sent', count: 10 }];
-      mockGetStatsByUserId.mockResolvedValueOnce(stats);
+      const stats = [{ status: 'sent', count: 10 }];
+      vi.mocked(repository.getStatsByUserId).mockResolvedValueOnce(stats);
 
-      const result = await notificationService.getStatsByUserId('user-1');
+      const result = await service.getStatsByUserId('user-1');
 
-      expect(mockGetStatsByUserId).toHaveBeenCalledWith('user-1');
+      expect(repository.getStatsByUserId).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(stats);
     });
 
     it('throws ValidationError when id is empty', async () => {
-      await expect(notificationService.getStatsByUserId('')).rejects.toThrow(ValidationError);
-      expect(mockGetStatsByUserId).not.toHaveBeenCalled();
+      await expect(service.getStatsByUserId('')).rejects.toThrow(ValidationError);
+      expect(repository.getStatsByUserId).not.toHaveBeenCalled();
     });
   });
 });

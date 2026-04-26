@@ -60,7 +60,7 @@ export const setupQuestions: DistinctQuestion<PromptState>[] = [
     validate: (input: string) => (input.trim() ? true : 'Project name is required'),
   },
   {
-    type: 'select',
+    type: 'list',
     name: 'environment',
     message: 'Environment:',
     default: 'development',
@@ -142,7 +142,7 @@ export const setupQuestions: DistinctQuestion<PromptState>[] = [
   },
 
   {
-    type: 'select',
+    type: 'list',
     name: 'smtpProvider',
     message: 'SMTP provider:',
     default: 'mailtrap',

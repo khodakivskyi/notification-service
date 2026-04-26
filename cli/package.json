@@ -24,13 +24,17 @@
   },
   "dependencies": {
     "amqplib": "^0.10.9",
-    "js-yaml": "^4.1.1",
     "chalk": "^5.0.0",
     "inquirer": "^9.0.0",
+    "js-yaml": "^4.1.1",
     "ora": "^8.0.0"
   },
   "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/inquirer": "^9.0.9",
+    "@types/js-yaml": "^4.0.9",
     "@types/node": "^25.1.0",
+    "@types/pg": "^8.20.0",
     "@typescript-eslint/eslint-plugin": "^8.57.1",
     "@typescript-eslint/parser": "^8.57.1",
     "@vitest/coverage-v8": "^4.0.18",
@@ -39,7 +43,6 @@
     "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.18",
-    "@types/amqplib": "^0.10.8"
+    "vitest": "^4.0.18"
   }
 }

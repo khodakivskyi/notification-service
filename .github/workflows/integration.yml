@@ -1,4 +1,4 @@
-name: CI
+name: Integration
 
 on:
   pull_request:
@@ -7,7 +7,30 @@ on:
     branches: [ master ]
 
 jobs:
-  test:
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      main: ${{ steps.filter.outputs.main }}
+      cli: ${{ steps.filter.outputs.cli }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            main:
+              - 'src/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'docker-compose.yml'
+
+            cli:
+              - 'cli/**'
+  main:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.main == 'true'
     runs-on: ubuntu-latest
 
     steps:
@@ -16,8 +39,9 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
+        node-version: '22'
         cache: 'npm'
+        cache-dependency-path: package-lock.json
 
     - name: Install dependencies
       run: npm ci
@@ -93,3 +117,30 @@ jobs:
         docker compose --env-file .env down -v
         rm -f .env
         echo "✅ Cleanup completed"
+  cli-tool:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.cli == 'true'
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: cli
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: cli/package-lock.json
+
+      - name: Install CLI dependencies
+        run: npm ci
+
+      - name: Build CLI
+        run: npm run build
+
+      - name: Run CLI tests
+        run: npm test

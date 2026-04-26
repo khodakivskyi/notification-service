@@ -22,7 +22,7 @@
     "allowJs": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.js", "cli/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.js"],
   "ts-node": {
     "esm": true,
     "transpileOnly": true,

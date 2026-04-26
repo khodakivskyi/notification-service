@@ -11,6 +11,7 @@
     "start": "node dist/index.js",
     "start:workers": "node dist/workers.js",
     "test": "cross-env NODE_ENV=test vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "lint": "eslint src --ext .ts",
     "lint:fix": "eslint src --ext .ts --fix",

@@ -57,7 +57,7 @@ router.post(
  * GET /api/notifications/:id
  * Get notification by ID
  */
-router.get('/:id', validate(uuidParam), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', validate(uuidParam, 'params'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
     const notification = await emailService.getById(id);
@@ -74,7 +74,7 @@ router.get('/:id', validate(uuidParam), async (req: Request, res: Response, next
  */
 router.get(
   '/user/:userId/stats',
-  validate(userIdParam),
+  validate(userIdParam, 'params'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;

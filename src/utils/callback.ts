@@ -1,4 +1,4 @@
-import httpClient from '../helpers/httpClient.js';
+import { httpClient } from '../helpers/index.js';
 import logger from '../config/logger.js';
 
 export interface CallbackResponse {

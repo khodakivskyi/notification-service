@@ -1,6 +1,7 @@
 import rabbitMQConnection from '../config/rabbitmq.js';
 import config from '../config/env.js';
 import logger from '../config/logger.js';
+import { getErrorMessage } from '../helpers/index.js';
 
 export interface EmailJobData {
   to: string;
@@ -74,7 +75,7 @@ class EmailQueue {
         dlq: config.rabbitmq.queues.emailDlq,
       });
     } catch (error: unknown) {
-      logger.error('Failed to initialize email queue', { error: error instanceof Error ? error.message : ''});
+      logger.error('Failed to initialize email queue', { error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -111,7 +112,7 @@ class EmailQueue {
       return true;
     } catch (error: unknown) {
       logger.error('Failed to add job to queue', {
-        error: error instanceof Error ? error.message : null,
+        error: getErrorMessage(error) || null,
       });
       throw error;
     }
@@ -130,7 +131,7 @@ class EmailQueue {
         consumerCount: queueInfo.consumerCount,
       };
     } catch (error: unknown) {
-      logger.error('Failed to get queue stats', { error: error instanceof Error ? error.message : ''});
+      logger.error('Failed to get queue stats', { error: getErrorMessage(error) });
       return null;
     }
   }

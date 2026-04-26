@@ -1,6 +1,7 @@
 import db from '../config/database.js';
 import logger from '../config/logger.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import { getErrorMessage } from '../helpers/index.js';
 import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
 
 class NotificationRepository {
@@ -31,7 +32,7 @@ class NotificationRepository {
 
       return result.rows[0];
     } catch (error: unknown) {
-      logger.error('Error creating notification record', { error: error instanceof Error ? error.message : '' });
+      logger.error('Error creating notification record', { error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -70,7 +71,7 @@ class NotificationRepository {
         }
         return claimed;
       } catch (error: unknown) {
-        logger.error('Error claiming notification for processing', { id, error: error instanceof Error ? error.message : '' });
+        logger.error('Error claiming notification for processing', { id, error: getErrorMessage(error) });
         throw error;
       }
     } else {
@@ -100,7 +101,7 @@ class NotificationRepository {
           hasError: errorMessage !== null,
         });
       } catch (error: unknown) {
-        logger.error('Error updating notification status', { id, statusId, error: error instanceof Error ? error.message : '' });
+        logger.error('Error updating notification status', { id, statusId, error: getErrorMessage(error) });
         throw error;
       }
     }
@@ -131,7 +132,7 @@ class NotificationRepository {
 
       return result.rows;
     } catch (error: unknown) {
-      logger.error('Error fetching notifications by user ID', { userId, error: error instanceof Error ? error.message : '' });
+      logger.error('Error fetching notifications by user ID', { userId, error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -183,7 +184,7 @@ class NotificationRepository {
     } catch (error: unknown) {
       logger.error('Failed to fetch notification stats', {
         userId,
-        error: error instanceof Error ? error.message : '',
+        error: getErrorMessage(error),
       });
       throw error;
     }

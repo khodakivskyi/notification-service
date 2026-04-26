@@ -1,6 +1,7 @@
 import { Pool, QueryResult, PoolClient } from 'pg';
 import logger from './logger.js';
 import config from './env.js';
+import { getErrorMessage } from '../helpers/index.js';
 
 // Database Pool Configuration
 const pool = new Pool({
@@ -47,7 +48,7 @@ export async function connect(): Promise<void> {
     client.release();
   } catch (error: unknown) {
     logger.error('❌ Failed to connect to database', {
-      error: error instanceof Error ? error.message : '',
+      error: getErrorMessage(error),
       database_url: config.database.url,
     });
     throw error;
@@ -80,7 +81,7 @@ export async function query<T extends Record<string, any> = any>(
   } catch (error: unknown) {
     logger.error('Error executing query', {
       query: text,
-      error: error instanceof Error ? error.message : '',
+      error: getErrorMessage(error),
       stack: error instanceof Error ? error.stack : '',
     });
     throw error;
@@ -94,7 +95,7 @@ export async function checkConnection(): Promise<boolean> {
     return true;
   } catch (error: unknown) {
     logger.error('Database connection check failed', {
-      error: error instanceof Error ? error.message : '',
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -107,7 +108,7 @@ export async function close(): Promise<void> {
     logger.info('Database pool has been closed');
   } catch (error: unknown) {
     logger.error('Error closing database pool', {
-      error: error instanceof Error ? error.message : '',
+      error: getErrorMessage(error),
     });
     throw error;
   }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import emailService from '../services/emailService.js';
+import notificationService from '../services/notificationService.js';
 import notificationRepository from '../repositories/notificationRepository.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
@@ -26,7 +26,7 @@ const mockUpdateStatus = vi.mocked(notificationRepository.updateStatus);
 const mockGetById = vi.mocked(notificationRepository.getById);
 const mockGetStatsByUserId = vi.mocked(notificationRepository.getStatsByUserId);
 
-describe('emailService', () => {
+describe('notificationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -51,7 +51,7 @@ describe('emailService', () => {
 
       mockCreate.mockResolvedValueOnce(created);
 
-      const result = await emailService.createNotification({
+      const result = await notificationService.createNotification({
         userId: 'user-1',
         channel: 'a@b.com',
         subject: 'Subj',
@@ -71,7 +71,7 @@ describe('emailService', () => {
 
     it('throws ValidationError for invalid email when type is email', async () => {
       await expect(
-        emailService.createNotification({
+        notificationService.createNotification({
           userId: 'user-1',
           channel: 'invalid-email',
           subject: 'S',
@@ -86,13 +86,13 @@ describe('emailService', () => {
     it('calls repository.updateStatus for valid statusId', async () => {
       mockUpdateStatus.mockResolvedValueOnce(undefined);
 
-      await emailService.updateStatus('id-1', NOTIFICATION_STATUSES.SENT);
+      await notificationService.updateStatus('id-1', NOTIFICATION_STATUSES.SENT);
 
       expect(mockUpdateStatus).toHaveBeenCalledWith('id-1', NOTIFICATION_STATUSES.SENT, null);
     });
 
     it('throws NotFoundError for invalid statusId', async () => {
-      await expect(emailService.updateStatus('id-1', 999)).rejects.toThrow(NotFoundError);
+      await expect(notificationService.updateStatus('id-1', 999)).rejects.toThrow(NotFoundError);
       expect(mockUpdateStatus).not.toHaveBeenCalled();
     });
   });
@@ -118,21 +118,21 @@ describe('emailService', () => {
 
       mockGetById.mockResolvedValueOnce(notification);
 
-      const result = await emailService.getById('id-1');
+      const result = await notificationService.getById('id-1');
 
       expect(mockGetById).toHaveBeenCalledWith('id-1');
       expect(result).toEqual(notification);
     });
 
     it('throws ValidationError when id is empty', async () => {
-      await expect(emailService.getById('')).rejects.toThrow(ValidationError);
+      await expect(notificationService.getById('')).rejects.toThrow(ValidationError);
       expect(mockGetById).not.toHaveBeenCalled();
     });
 
     it('throws NotFoundError when notification not found', async () => {
       mockGetById.mockResolvedValueOnce(null);
 
-      await expect(emailService.getById('missing-id')).rejects.toThrow(NotFoundError);
+      await expect(notificationService.getById('missing-id')).rejects.toThrow(NotFoundError);
     });
 
     it('throws ForbiddenError when userId does not match notification userId', async () => {
@@ -152,7 +152,7 @@ describe('emailService', () => {
         sentAt: null,
       } as any);
 
-      await expect(emailService.getById('id-1', 'user-B')).rejects.toThrow(ForbiddenError);
+      await expect(notificationService.getById('id-1', 'user-B')).rejects.toThrow(ForbiddenError);
     });
   });
 
@@ -161,14 +161,14 @@ describe('emailService', () => {
       const stats = [{ type: 'email' as const, status: 'sent', count: 10 }];
       mockGetStatsByUserId.mockResolvedValueOnce(stats);
 
-      const result = await emailService.getStatsByUserId('user-1');
+      const result = await notificationService.getStatsByUserId('user-1');
 
       expect(mockGetStatsByUserId).toHaveBeenCalledWith('user-1');
       expect(result).toEqual(stats);
     });
 
     it('throws ValidationError when id is empty', async () => {
-      await expect(emailService.getStatsByUserId('')).rejects.toThrow(ValidationError);
+      await expect(notificationService.getStatsByUserId('')).rejects.toThrow(ValidationError);
       expect(mockGetStatsByUserId).not.toHaveBeenCalled();
     });
   });

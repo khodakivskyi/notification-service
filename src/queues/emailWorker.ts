@@ -1,13 +1,15 @@
 import rabbitMQConnection from '../config/rabbitmq.js';
-import emailService from '../services/emailService.js';
+import notificationService from '../services/notificationService.js';
 import config from '../config/env.js';
 import logger from '../config/logger.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
 import { ValidationError } from '../exceptions/index.js';
+import { getErrorMessage } from '../helpers/index.js';
 import { callCallback } from '../utils/callback.js';
 import emailQueue, { EmailJob } from './emailQueue.js';
 import { Notification } from '../types/notification.js';
 import * as amqp from 'amqplib';
+import emailTransport from '../services/emailTransport.js';
 
 class EmailWorker {
   private readonly queueName: string;
@@ -49,7 +51,7 @@ class EmailWorker {
         { noAck: false },
       );
     } catch (error: unknown) {
-      logger.error('Failed to start EmailWorker', { error: error instanceof Error ? error.message : ''});
+      logger.error('Failed to start EmailWorker', { error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -82,7 +84,7 @@ class EmailWorker {
       job = JSON.parse(msg.content.toString());
     } catch (error: unknown) {
       logger.error('Invalid JSON payload, dropping message', {
-        error: error instanceof Error ? error.message : '',
+        error: getErrorMessage(error),
         raw: msg.content.toString(),
       });
       consumeChannel.ack(msg);
@@ -104,7 +106,7 @@ class EmailWorker {
    */
   async executeJob(job: EmailJob): Promise<boolean> {
     const notificationId = job.data.notificationId;
-    const claimed = await emailService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
+    const claimed = await notificationService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
     if (!claimed) {
       logger.info('Notification already processed or claimed by another worker, skipping', {
         notificationId,
@@ -117,9 +119,9 @@ class EmailWorker {
       notificationId,
     });
 
-    await emailService.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
+    await emailTransport.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
 
-    await emailService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
+    await notificationService.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
     return false;
   }
 
@@ -132,7 +134,7 @@ class EmailWorker {
   ): Promise<void> {
     if (!skipped && job.data.callbackUrl) {
       try {
-        const notification = await emailService.getById(job.data.notificationId);
+        const notification = await notificationService.getById(job.data.notificationId);
         await callCallback(job.data.callbackUrl, {
           notificationId: notification.id,
           status: notification.status,
@@ -142,7 +144,7 @@ class EmailWorker {
       } catch (callbackError: unknown) {
         logger.warn('Callback failed', {
           callbackUrl: job.data.callbackUrl,
-          error: callbackError instanceof Error ? callbackError.message : '',
+          error: getErrorMessage(callbackError),
         });
       }
     }
@@ -162,7 +164,7 @@ class EmailWorker {
     publishChannel: amqp.ConfirmChannel,
   ): Promise<void> {
     logger.error('Job failed', {
-      error: error instanceof Error ? error.message : '',
+      error: getErrorMessage(error),
       retries: job?.retries || 0,
     });
 
@@ -178,40 +180,40 @@ class EmailWorker {
         maxRetries,
       });
 
-      await emailService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
+      await notificationService.updateStatus(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
 
       job.retries = currentRetries + 1;
     } else {
       if (isNonRetriable) {
         logger.error('Non-retriable error, marking failed', {
-          error: error instanceof Error ? error.message : '',
+          error: getErrorMessage(error),
         });
       } else {
         logger.error('Max retries reached, marking failed', {
           retries: currentRetries,
           maxRetries,
-          error: error instanceof Error ? error.message : '',
+          error: getErrorMessage(error),
         });
       }
 
-      await emailService.updateStatus(
+      await notificationService.updateStatus(
         job.data.notificationId,
         NOTIFICATION_STATUSES.FAILED,
-        error instanceof Error ? error.message : '',
+        getErrorMessage(error),
       );
     }
 
     // Evoke callback (if exists)
     if (job?.data?.callbackUrl && notificationId) {
       try {
-        const notification = await emailService.getById(notificationId);
-        await this.sendCallback(job, notification, error instanceof Error ? error.message : '');
+        const notification = await notificationService.getById(notificationId);
+        await this.sendCallback(job, notification, getErrorMessage(error));
       } catch {
         // fallback: send callback without notification object
         await this.sendCallback(
           job,
           { id: notificationId } as Notification,
-          error instanceof Error ? error.message : '',
+          getErrorMessage(error),
         );
       }
     }
@@ -303,7 +305,7 @@ class EmailWorker {
       } catch (callbackError: unknown) {
         logger.warn('Callback failed on error', {
           callbackUrl: job.data.callbackUrl,
-          error: callbackError instanceof Error ? callbackError.message : '',
+          error: getErrorMessage(callbackError),
         });
       }
     }

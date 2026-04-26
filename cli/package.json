@@ -1,5 +1,5 @@
 {
-  "name": "@khodakivskyi/notification-service-cli",
+  "name": "@khodakivskyi/notification-service-init",
   "version": "1.0.0",
   "type": "module",
   "bin": {

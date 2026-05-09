@@ -42,6 +42,7 @@ Welcome to the technical documentation for Notification Service v2.
 
 ## Quick Links
 
+- [Product overview & docs (web)](https://notification-service.vercel.app/)
 - [GitHub Repository](https://github.com/khodakivskyi/notification-service)
 - [Latest Release](https://github.com/khodakivskyi/notification-service/releases/latest)
 - [Docker Images](https://ghcr.io/khodakivskyi/notification-service)

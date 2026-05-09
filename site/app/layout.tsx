@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { getSiteUrl } from "@/lib/site-url";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,6 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: getSiteUrl(),
   title: {
     default: "notification-service",
     template: "%s — notification-service",
@@ -26,6 +28,7 @@ export const metadata: Metadata = {
     description:
       "Internal backend-to-backend notification microservice for sending email notifications with queue-based processing and retries.",
     type: "website",
+    url: "/",
   },
 };
 

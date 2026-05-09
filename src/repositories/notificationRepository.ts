@@ -1,6 +1,6 @@
 import db from '../config/database.js';
 import logger from '../config/logger.js';
-import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import { NOTIFICATION_STATUSES, type NotificationStatusId } from '../constants/index.js';
 import type { INotificationRepository } from '../interfaces/INotificationRepository.js';
 import { getErrorMessage } from '../helpers/index.js';
 import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
@@ -48,7 +48,7 @@ export class NotificationRepository implements INotificationRepository {
    */
   async updateStatus(
     id: string,
-    statusId: number,
+    statusId: NotificationStatusId,
     errorMessage: string | null = null,
   ): Promise<boolean | void> {
     if (statusId === NOTIFICATION_STATUSES.SENDING) {

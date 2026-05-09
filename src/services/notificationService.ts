@@ -1,4 +1,4 @@
-import { isValidStatusId } from '../constants/index.js';
+import { isValidStatusId, type NotificationStatusId } from '../constants/index.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
 import { validateEmail } from '../helpers/index.js';
 import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
@@ -30,11 +30,11 @@ export class NotificationService implements INotificationService {
 
   async updateStatus(
     id: string,
-    statusId: number,
+    statusId: NotificationStatusId,
     errorMessage: string | null = null,
   ): Promise<boolean | void> {
     if (!isValidStatusId(statusId)) {
-      throw new NotFoundError('Status', statusId.toString());
+      throw new NotFoundError('Status', String(statusId));
     }
 
     return this.repository.updateStatus(id, statusId, errorMessage);

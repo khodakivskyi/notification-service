@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 2.0.0 (2026-05-09)
+
+### ✨ Features
+
+- Add interactive CLI npm setup tool for bootstrap flow (`npx notification-service init`)
+- Add `.env` generation, docker-compose generation/merge, and setup validation in CLI
+- Add connection checks (PostgreSQL, RabbitMQ, SMTP) from setup flow
+- Add automatic database migrations on startup
+- Add TypeScript migration files for `node-pg-migrate`
+
+### 💥 Breaking Changes
+
+- Replace verification-specific send endpoint with unified `POST /api/notifications/send`
+- Update request payload to use `htmlContent` for notification body
+- Move to ESM-based project structure
+
+### ♻️ Refactoring
+
+- Improve internal architecture with interfaces, dependency injection, and channel abstractions
+- Improve shutdown and error handling flow across API and workers
+
 ## 1.0.0 (2026-02-06)
 
 ### 🐛 Bug Fixes

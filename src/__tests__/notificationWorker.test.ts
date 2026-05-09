@@ -4,10 +4,10 @@ import { ValidationError } from '../exceptions/index.js';
 import { NOTIFICATION_STATUSES } from '../constants/index.js';
 import { callCallback } from '../utils/callback.js';
 import config from '../config/env.js';
-import { EmailWorker } from '../queues/emailWorker.js';
-import type { EmailJob, EmailJobData } from '../queues/emailQueue.js';
+import { NotificationWorker } from '../queues/notificationWorker.js';
+import type { NotificationJob, NotificationJobPayload } from '../queues/notificationQueue.js';
 import type { INotificationService } from '../interfaces/INotificationService.js';
-import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
+import type { INotificationChannel } from '../interfaces/INotificationChannel.js';
 
 vi.mock('../config/logger.js', () => ({
   default: {
@@ -33,13 +33,15 @@ function createMockNotificationService(): INotificationService {
   };
 }
 
-function createMockMail(): IEmailTransport {
+function createMockChannel(): INotificationChannel {
   return {
-    sendNotification: vi.fn(),
+    send: vi.fn(),
   };
 }
 
-function sampleJob(overrides: Partial<Omit<EmailJob, 'data'>> & { data?: Partial<EmailJobData> } = {}): EmailJob {
+function sampleJob(
+  overrides: Partial<Omit<NotificationJob, 'data'>> & { data?: Partial<NotificationJobPayload> } = {},
+): NotificationJob {
   const { data: dataOverrides, ...rest } = overrides;
   return {
     data: {
@@ -56,16 +58,16 @@ function sampleJob(overrides: Partial<Omit<EmailJob, 'data'>> & { data?: Partial
   };
 }
 
-describe('emailWorker', () => {
+describe('notificationWorker', () => {
   let notifications: INotificationService;
-  let mail: IEmailTransport;
-  let worker: EmailWorker;
+  let channel: INotificationChannel;
+  let worker: NotificationWorker;
 
   beforeEach(() => {
     vi.clearAllMocks();
     notifications = createMockNotificationService();
-    mail = createMockMail();
-    worker = new EmailWorker(notifications, mail);
+    channel = createMockChannel();
+    worker = new NotificationWorker(notifications, channel);
   });
 
   describe('parseAndValidateMessage', () => {
@@ -115,19 +117,19 @@ describe('emailWorker', () => {
 
       expect(skipped).toBe(true);
       expect(notifications.updateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENDING);
-      expect(mail.sendNotification).not.toHaveBeenCalled();
+      expect(channel.send).not.toHaveBeenCalled();
     });
 
-    it('sends mail and marks SENT when claim succeeds', async () => {
+    it('delivers via channel and marks SENT when claim succeeds', async () => {
       vi.mocked(notifications.updateStatus).mockResolvedValueOnce(true);
-      vi.mocked(mail.sendNotification).mockResolvedValueOnce(undefined);
+      vi.mocked(channel.send).mockResolvedValueOnce(undefined);
       vi.mocked(notifications.updateStatus).mockResolvedValueOnce(undefined);
 
       const job = sampleJob();
       const skipped = await worker.executeJob(job);
 
       expect(skipped).toBe(false);
-      expect(mail.sendNotification).toHaveBeenCalledWith(job.data.to, job.data.subject, job.data.htmlContent);
+      expect(channel.send).toHaveBeenCalledWith(job.data.to, job.data.subject, job.data.htmlContent);
       expect(notifications.updateStatus).toHaveBeenLastCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.SENT);
     });
   });
@@ -227,7 +229,7 @@ describe('emailWorker', () => {
 
       expect(notifications.updateStatus).toHaveBeenCalledWith(job.data.notificationId, NOTIFICATION_STATUSES.RETRYING);
       expect(sendToQueue).toHaveBeenCalledWith(
-        config.rabbitmq.queues.emailRetry,
+        config.rabbitmq.queues.outboundRetry,
         expect.any(Buffer),
         expect.objectContaining({ persistent: true }),
       );

@@ -3,7 +3,7 @@ import config from './config/env.js';
 import logger from './config/logger.js';
 import db from './config/database.js';
 import rabbitMQConnection from './config/rabbitmq.js';
-import emailQueue from './queues/emailQueue.js';
+import notificationQueue from './queues/notificationQueue.js';
 import { Server } from 'http';
 import { runMigrations } from './utils/migrationRunner.js';
 import { createShutdownHandler } from './utils/shutdown.js';
@@ -13,7 +13,7 @@ const server: Server = app.listen(config.server.port, async () => {
     await db.connect();
     await runMigrations();
     await rabbitMQConnection.connect();
-    await emailQueue.init();
+    await notificationQueue.init();
 
     logger.info('🚀 Notification service started', {
       port: config.server.port,

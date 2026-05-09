@@ -34,6 +34,9 @@ describe('generateEnvFile', () => {
 
     expect(env).toContain('DATABASE_URL=postgresql://postgres:postgres@db:5432/notifications');
     expect(env).toContain('RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672');
+    expect(env).toContain('OUTBOUND_QUEUE_NAME=email_notifications');
+    expect(env).toContain('OUTBOUND_DLQ_NAME=email.dlq');
+    expect(env).toContain('RABBITMQ_OUTBOUND_TTL=300000');
 
     expect(env).toContain('SMTP_HOST=smtp.mailtrap.io');
     expect(env).toContain('SMTP_PORT=2525');

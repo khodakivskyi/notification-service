@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { notificationService } from '../container.js';
-import emailQueue from '../queues/emailQueue.js';
+import notificationQueue from '../queues/notificationQueue.js';
 import { ANONYMOUS_USER_ID } from '../constants/index.js';
 import validate from '../middleware/validate.js';
 import {
@@ -13,7 +13,7 @@ const router = express.Router();
 
 /**
  * POST /api/notifications/send
- * Send notification email to user
+ * Queue notification for outbound delivery (e.g. email)
  */
 router.post(
   '/send',
@@ -32,7 +32,7 @@ router.post(
         },
       });
 
-      await emailQueue.addNotificationEmail({
+      await notificationQueue.addJob({
         to: email,
         subject,
         htmlContent: htmlContent,
@@ -89,11 +89,11 @@ router.get(
 
 /**
  * GET /api/notifications/queue/stats
- * Get email queue statistics
+ * Get outbound delivery queue statistics
  */
 router.get('/queue/stats', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const stats = await emailQueue.getStats();
+    const stats = await notificationQueue.getStats();
     res.status(200).json({ success: true, data: stats });
   } catch (error) {
     next(error);

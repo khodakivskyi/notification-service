@@ -63,10 +63,13 @@ jobs:
         SMTP_USER=test@example.com
         SMTP_PASS=testpass
         RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-        EMAIL_QUEUE_NAME=email_notifications
+        OUTBOUND_QUEUE_NAME=email_notifications
         RABBITMQ_DLX_EXCHANGE=notification.dlx
-        EMAIL_DLQ_NAME=email.dlq
-        EMAIL_DLQ_ROUTING_KEY=email.dlq
+        OUTBOUND_DLQ_NAME=email.dlq
+        OUTBOUND_DLQ_ROUTING_KEY=email.dlq
+        OUTBOUND_RETRY_QUEUE_NAME=email.retry
+        RABBITMQ_OUTBOUND_TTL=300000
+        RABBITMQ_OUTBOUND_MAX_LENGTH=10000
         APP_PORT=3001
         EOF
 

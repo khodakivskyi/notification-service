@@ -1,16 +1,11 @@
 name: Publish CLI to npm
 
 on:
-  workflow_run:
-    workflows: [ "Integration" ]
-    types:
-      - completed
+  push:
+    branches: [ publish ]
 
 jobs:
   publish:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'publish'
     runs-on: ubuntu-latest
     defaults:
       run:

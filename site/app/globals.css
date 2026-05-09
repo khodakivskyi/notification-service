@@ -1,0 +1,200 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+}
+
+/* Light mode — clean white developer-product feel */
+:root {
+  --background: oklch(0.99 0 0);
+  --foreground: oklch(0.12 0 0);
+  --card: oklch(0.99 0 0);
+  --card-foreground: oklch(0.12 0 0);
+  --popover: oklch(0.99 0 0);
+  --popover-foreground: oklch(0.12 0 0);
+  /* Primary: sharp dark ink */
+  --primary: oklch(0.18 0 0);
+  --primary-foreground: oklch(0.99 0 0);
+  /* Secondary: light neutral surface */
+  --secondary: oklch(0.95 0 0);
+  --secondary-foreground: oklch(0.18 0 0);
+  --muted: oklch(0.96 0 0);
+  --muted-foreground: oklch(0.50 0 0);
+  --accent: oklch(0.95 0 0);
+  --accent-foreground: oklch(0.18 0 0);
+  /* Accent blue: subtle technical blue */
+  --brand: oklch(0.55 0.18 250);
+  --brand-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.90 0 0);
+  --input: oklch(0.90 0 0);
+  --ring: oklch(0.55 0.18 250);
+  --radius: 0.5rem;
+  --sidebar: oklch(0.97 0 0);
+  --sidebar-foreground: oklch(0.12 0 0);
+  --sidebar-primary: oklch(0.18 0 0);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.93 0 0);
+  --sidebar-accent-foreground: oklch(0.18 0 0);
+  --sidebar-border: oklch(0.90 0 0);
+  --sidebar-ring: oklch(0.55 0.18 250);
+}
+
+/* Dark mode — deep charcoal developer aesthetic */
+.dark {
+  --background: oklch(0.12 0 0);
+  --foreground: oklch(0.94 0 0);
+  --card: oklch(0.16 0 0);
+  --card-foreground: oklch(0.94 0 0);
+  --popover: oklch(0.16 0 0);
+  --popover-foreground: oklch(0.94 0 0);
+  --primary: oklch(0.94 0 0);
+  --primary-foreground: oklch(0.16 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.94 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.60 0 0);
+  --accent: oklch(0.22 0 0);
+  --accent-foreground: oklch(0.94 0 0);
+  --brand: oklch(0.65 0.18 250);
+  --brand-foreground: oklch(0.12 0 0);
+  --destructive: oklch(0.70 0.19 22);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 12%);
+  --ring: oklch(0.65 0.18 250);
+  --sidebar: oklch(0.15 0 0);
+  --sidebar-foreground: oklch(0.94 0 0);
+  --sidebar-primary: oklch(0.94 0 0);
+  --sidebar-primary-foreground: oklch(0.16 0 0);
+  --sidebar-accent: oklch(0.20 0 0);
+  --sidebar-accent-foreground: oklch(0.94 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.65 0.18 250);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+/* Scroll-based reveal animations */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease forwards;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease forwards;
+}
+
+/* Reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  .animate-fade-up,
+  .animate-fade-in,
+  [data-reveal] {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+}
+
+/* Scroll reveal: hidden state until JS kicks in */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.55s ease, transform 0.55s ease;
+}
+
+[data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-reveal-delay="1"] { transition-delay: 0.1s; }
+[data-reveal-delay="2"] { transition-delay: 0.2s; }
+[data-reveal-delay="3"] { transition-delay: 0.3s; }
+[data-reveal-delay="4"] { transition-delay: 0.4s; }
+[data-reveal-delay="5"] { transition-delay: 0.5s; }
+
+/* Prose / markdown styles */
+.prose {
+  @apply text-foreground leading-relaxed;
+}
+.prose h1 { @apply text-3xl font-bold tracking-tight mt-8 mb-4 text-foreground; }
+.prose h2 { @apply text-2xl font-semibold tracking-tight mt-8 mb-3 text-foreground; }
+.prose h3 { @apply text-xl font-semibold mt-6 mb-2 text-foreground; }
+.prose h4 { @apply text-lg font-medium mt-4 mb-2 text-foreground; }
+.prose p { @apply mb-4 leading-relaxed; }
+.prose a { @apply text-[var(--brand)] underline underline-offset-4 hover:opacity-80 transition-opacity; }
+.prose ul { @apply list-disc list-outside ml-5 mb-4 space-y-1; }
+.prose ol { @apply list-decimal list-outside ml-5 mb-4 space-y-1; }
+.prose li { @apply leading-relaxed; }
+.prose blockquote {
+  @apply border-l-4 border-border pl-4 italic text-muted-foreground my-4;
+}
+.prose pre {
+  @apply bg-muted text-foreground rounded-lg p-4 overflow-x-auto text-sm my-4 border border-border relative;
+}
+.prose code:not(pre code) {
+  @apply bg-muted text-foreground text-sm rounded px-1.5 py-0.5 font-mono;
+}
+.prose table { @apply w-full border-collapse text-sm my-4; }
+.prose th { @apply border border-border bg-muted px-3 py-2 text-left font-semibold; }
+.prose td { @apply border border-border px-3 py-2; }
+.prose hr { @apply border-border my-8; }
+.prose strong { @apply font-semibold text-foreground; }

@@ -1,4 +1,4 @@
-name: Integration
+name: CI
 
 on:
   pull_request:
@@ -7,30 +7,7 @@ on:
     branches: [ master ]
 
 jobs:
-  detect-changes:
-    runs-on: ubuntu-latest
-    outputs:
-      main: ${{ steps.filter.outputs.main }}
-      cli: ${{ steps.filter.outputs.cli }}
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            main:
-              - 'src/**'
-              - 'package.json'
-              - 'package-lock.json'
-              - 'docker-compose.yml'
-
-            cli:
-              - 'cli/**'
-  main:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.main == 'true'
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -39,9 +16,8 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '18'
         cache: 'npm'
-        cache-dependency-path: package-lock.json
 
     - name: Install dependencies
       run: npm ci
@@ -63,13 +39,10 @@ jobs:
         SMTP_USER=test@example.com
         SMTP_PASS=testpass
         RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
-        OUTBOUND_QUEUE_NAME=email_notifications
+        EMAIL_QUEUE_NAME=email_notifications
         RABBITMQ_DLX_EXCHANGE=notification.dlx
-        OUTBOUND_DLQ_NAME=email.dlq
-        OUTBOUND_DLQ_ROUTING_KEY=email.dlq
-        OUTBOUND_RETRY_QUEUE_NAME=email.retry
-        RABBITMQ_OUTBOUND_TTL=300000
-        RABBITMQ_OUTBOUND_MAX_LENGTH=10000
+        EMAIL_DLQ_NAME=email.dlq
+        EMAIL_DLQ_ROUTING_KEY=email.dlq
         APP_PORT=3001
         EOF
 
@@ -120,30 +93,3 @@ jobs:
         docker compose --env-file .env down -v
         rm -f .env
         echo "✅ Cleanup completed"
-  cli-tool:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.cli == 'true'
-    runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: cli
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: cli/package-lock.json
-
-      - name: Install CLI dependencies
-        run: npm ci
-
-      - name: Build CLI
-        run: npm run build
-
-      - name: Run CLI tests
-        run: npm test

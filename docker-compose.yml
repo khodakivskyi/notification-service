@@ -17,6 +17,7 @@ services:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
+      - ./migrations:/docker-entrypoint-initdb.d
     networks:
       - notification-network
     healthcheck:
@@ -76,7 +77,7 @@ services:
     command: [ "node", "dist/index.js" ]
 
   # ============================================
-  # Notification delivery workers (queue consumers)
+  # Email Workers
   # ============================================
   workers:
     build:
@@ -97,15 +98,6 @@ services:
     command: [ "node", "dist/workers.js" ]
     deploy:
       replicas: 2  # Workers count
-
-  mailhog:
-    image: mailhog/mailhog
-    container_name: mailhog
-    ports:
-      - "1025:1025"
-      - "8025:8025"
-    networks:
-      - notification-network
 
 # ============================================
 # Volumes

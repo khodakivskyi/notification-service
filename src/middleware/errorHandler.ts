@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import logger from '../config/logger.js';
-import config from '../config/env.js';
-import { BaseError } from '../exceptions/index.js';
+import logger from '../config/logger';
+import config from '../config/env';
+import { BaseError } from '../exceptions';
 
 /**
  * Centralized error handling

@@ -1,6 +1,6 @@
 import * as amqp from 'amqplib';
-import logger from './logger.js';
-import config from './env.js';
+import logger from './logger';
+import config from './env';
 
 /**
  * RabbitMQ Connection Manager

@@ -1,4 +1,4 @@
-import { ValidationError } from '../exceptions/index.js';
+import { ValidationError } from '../exceptions';
 
 /**
  * Validate required fields in data object
@@ -6,18 +6,12 @@ import { ValidationError } from '../exceptions/index.js';
  * @param requiredFields - Array of required field names
  * @throws {ValidationError} If any required field is missing
  */
-export function validateRequiredFields(data: unknown, requiredFields: string[]): void {
-  if (typeof data !== 'object' || data === null) {
-    throw new ValidationError('Invalid data', { missing: {} });
-  }
-
-  const obj = data as Record<string, unknown>;
-
+export function validateRequiredFields(data: any, requiredFields: string[]): void {
   const missing: string[] = [];
   const missingDetails: Record<string, boolean> = {};
 
   for (const field of requiredFields) {
-    if (!data || obj[field] === undefined || obj[field] === null || obj[field] === '') {
+    if (!data || data[field] === undefined || data[field] === null || data[field] === '') {
       missing.push(field);
       missingDetails[field] = true;
     }
@@ -35,7 +29,7 @@ export function validateRequiredFields(data: unknown, requiredFields: string[]):
  * @param email - Email address to validate
  * @returns True if email format is valid
  */
-export function isValidEmail(email: unknown): email is string {
+export function isValidEmail(email: any): email is string {
   if (!email || typeof email !== 'string') {
     return false;
   }
@@ -50,9 +44,9 @@ export function isValidEmail(email: unknown): email is string {
  * @param fieldName - Field name for error message
  * @throws {ValidationError} If email format is invalid
  */
-export function validateEmail(email: unknown, fieldName: string = 'email'): asserts email is string {
+export function validateEmail(email: any, fieldName: string = 'email'): asserts email is string {
   if (!isValidEmail(email)) {
-    throw new ValidationError('Invalid email address format', {
+    throw new ValidationError(`Invalid email address format`, {
       field: fieldName,
       value: email,
     });
@@ -64,7 +58,7 @@ export function validateEmail(email: unknown, fieldName: string = 'email'): asse
  * @param url - URL to validate
  * @returns True if URL format is valid
  */
-export function isValidUrl(url: unknown): url is string {
+export function isValidUrl(url: any): url is string {
   if (!url || typeof url !== 'string') {
     return false;
   }
@@ -83,9 +77,9 @@ export function isValidUrl(url: unknown): url is string {
  * @param fieldName - Field name for error message
  * @throws {ValidationError} If URL format is invalid
  */
-export function validateUrl(url: unknown, fieldName: string = 'url'): asserts url is string {
+export function validateUrl(url: any, fieldName: string = 'url'): asserts url is string {
   if (!isValidUrl(url)) {
-    throw new ValidationError('Invalid URL format', {
+    throw new ValidationError(`Invalid URL format`, {
       field: fieldName,
       value: url,
     });
@@ -97,7 +91,7 @@ export function validateUrl(url: unknown, fieldName: string = 'url'): asserts ur
  * @param uuid - UUID to validate
  * @returns True if UUID format is valid
  */
-export function isValidUuid(uuid: unknown): uuid is string {
+export function isValidUuid(uuid: any): uuid is string {
   if (!uuid || typeof uuid !== 'string') {
     return false;
   }
@@ -111,9 +105,9 @@ export function isValidUuid(uuid: unknown): uuid is string {
  * @param fieldName - Field name for error message
  * @throws {ValidationError} If UUID format is invalid
  */
-export function validateUuid(uuid: unknown, fieldName: string = 'id'): asserts uuid is string {
+export function validateUuid(uuid: any, fieldName: string = 'id'): asserts uuid is string {
   if (!isValidUuid(uuid)) {
-    throw new ValidationError('Invalid UUID format', {
+    throw new ValidationError(`Invalid UUID format`, {
       field: fieldName,
       value: uuid,
     });

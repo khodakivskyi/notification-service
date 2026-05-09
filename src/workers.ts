@@ -3,6 +3,7 @@ import rabbitMQConnection from './config/rabbitmq.js';
 import emailQueue from './queues/emailQueue.js';
 import { emailWorker } from './container.js';
 import db from './config/database.js';
+import { createShutdownHandler } from './utils/shutdown.js';
 
 /**
  * Workers Entry Point
@@ -19,22 +20,15 @@ async function startWorkers(): Promise<void> {
 
     logger.info('All workers started successfully');
 
-    // Graceful shutdown
-    process.on('SIGTERM', async () => {
-      logger.info('SIGTERM received, shutting down workers...');
-      await emailWorker.stop();
-      await rabbitMQConnection.close();
-      await db.close();
-      process.exit(0);
+    const shutdown = createShutdownHandler({
+      label: 'workers',
+      stopWorker: () => emailWorker.stop(),
+      closeRabbitMQ: () => rabbitMQConnection.close(),
+      closeDatabase: () => db.close(),
     });
 
-    process.on('SIGINT', async () => {
-      logger.info('SIGINT received, shutting down workers...');
-      await emailWorker.stop();
-      await rabbitMQConnection.close();
-      await db.close();
-      process.exit(0);
-    });
+    process.on('SIGTERM', () => void shutdown());
+    process.on('SIGINT', () => void shutdown());
   } catch (error: any) {
     logger.error('Failed to start workers', { error: error.message });
     process.exit(1);

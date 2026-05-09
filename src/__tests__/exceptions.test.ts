@@ -7,7 +7,7 @@ import {
   ConflictError,
   RateLimitError,
   ServiceUnavailableError,
-} from '../exceptions';
+} from '../exceptions/index.js';
 
 
 describe('exceptions', () => {

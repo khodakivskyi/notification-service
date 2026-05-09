@@ -1,6 +1,7 @@
 import { Pool, QueryResult, PoolClient } from 'pg';
-import logger from './logger';
-import config from './env';
+import logger from './logger.js';
+import config from './env.js';
+import { getErrorMessage } from '../helpers/index.js';
 
 // Database Pool Configuration
 const pool = new Pool({
@@ -38,6 +39,23 @@ pool.on('error', (error: Error) => {
 // ========================================
 
 /**
+ * Initialize database connection
+ */
+export async function connect(): Promise<void> {
+  try {
+    const client = await pool.connect();
+    logger.info('✅ Database connection successful');
+    client.release();
+  } catch (error: unknown) {
+    logger.error('❌ Failed to connect to database', {
+      error: getErrorMessage(error),
+      database_url: config.database.url,
+    });
+    throw error;
+  }
+}
+
+/**
  * Execute SQL query
  * @param text - SQL query
  * @param params - Parameters (for prepared statements)
@@ -60,11 +78,11 @@ export async function query<T extends Record<string, any> = any>(
     });
 
     return result;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error executing query', {
       query: text,
-      error: error.message,
-      stack: error.stack,
+      error: getErrorMessage(error),
+      stack: error instanceof Error ? error.stack : '',
     });
     throw error;
   }
@@ -75,9 +93,9 @@ export async function checkConnection(): Promise<boolean> {
   try {
     await pool.query('SELECT 1');
     return true;
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Database connection check failed', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
     return false;
   }
@@ -88,15 +106,16 @@ export async function close(): Promise<void> {
   try {
     await pool.end();
     logger.info('Database pool has been closed');
-  } catch (error: any) {
+  } catch (error: unknown) {
     logger.error('Error closing database pool', {
-      error: error.message,
+      error: getErrorMessage(error),
     });
     throw error;
   }
 }
 
 export default {
+  connect,
   query,
   checkConnection,
   close,

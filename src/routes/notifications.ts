@@ -1,88 +1,41 @@
 import express, { Request, Response, NextFunction } from 'express';
-import emailService from '../services/email/emailService';
-import emailQueue from '../queues/emailQueue';
-import { ANONYMOUS_USER_ID } from '../constants';
-import validate from '../middleware/validate';
+import { notificationService } from '../container.js';
+import notificationQueue from '../queues/notificationQueue.js';
+import { ANONYMOUS_USER_ID } from '../constants/index.js';
+import validate from '../middleware/validate.js';
 import {
-  sendVerification,
   sendNotification,
   uuidParam,
   userIdParam,
-} from '../schemas/notificationSchemas';
+} from '../schemas/notificationSchemas.js';
 
 const router = express.Router();
 
 /**
- * POST /api/notifications/send-verification
- * Send verification email to user
- */
-router.post(
-  '/send-verification',
-  validate(sendVerification),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const { email, username, verificationLink, userId, subject, callbackUrl } = req.body;
-
-      const notification = await emailService.createNotification({
-        userId: userId || ANONYMOUS_USER_ID,
-        type: 'email',
-        channel: email,
-        subject: subject || 'Verify your email address',
-        content: `Verification link: ${verificationLink}`,
-        metadata: {
-          username,
-          verificationLink,
-          callbackUrl: callbackUrl || null,
-        },
-      });
-
-      await emailQueue.addVerificationEmail({
-        to: email,
-        username,
-        verificationLink,
-        userId,
-        notificationId: notification.id,
-        callbackUrl: callbackUrl || null,
-      });
-
-      res.status(202).json({
-        success: true,
-        message: 'Verification email queued for delivery',
-        notificationId: notification.id,
-        statusUrl: `/api/notifications/${notification.id}`,
-      });
-    } catch (error) {
-      next(error);
-    }
-  },
-);
-
-/**
  * POST /api/notifications/send
- * Send notification email to user
+ * Queue notification for outbound delivery (e.g. email)
  */
 router.post(
   '/send',
   validate(sendNotification),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { email, subject, message, userId, callbackUrl } = req.body;
+      const { email, subject, htmlContent, userId, callbackUrl } = req.body;
 
-      const notification = await emailService.createNotification({
+      const notification = await notificationService.createNotification({
         userId: userId || ANONYMOUS_USER_ID,
-        type: 'email',
         channel: email,
         subject: subject,
-        content: message,
+        content: htmlContent,
         metadata: {
           callbackUrl: callbackUrl || null,
         },
       });
 
-      await emailQueue.addNotificationEmail({
+      await notificationQueue.addJob({
         to: email,
         subject,
-        message,
+        htmlContent: htmlContent,
         userId,
         notificationId: notification.id,
         callbackUrl: callbackUrl || null,
@@ -104,10 +57,10 @@ router.post(
  * GET /api/notifications/:id
  * Get notification by ID
  */
-router.get('/:id', validate(uuidParam), async (req: Request, res: Response, next: NextFunction) => {
+router.get('/:id', validate(uuidParam, 'params'), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
-    const notification = await emailService.getById(id);
+    const notification = await notificationService.getById(id);
 
     res.status(200).json({ success: true, data: notification });
   } catch (error) {
@@ -121,11 +74,11 @@ router.get('/:id', validate(uuidParam), async (req: Request, res: Response, next
  */
 router.get(
   '/user/:userId/stats',
-  validate(userIdParam),
+  validate(userIdParam, 'params'),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const userId = Array.isArray(req.params.userId) ? req.params.userId[0] : req.params.userId;
-      const stats = await emailService.getStatsByUserId(userId);
+      const stats = await notificationService.getStatsByUserId(userId);
 
       res.status(200).json({ success: true, data: stats });
     } catch (error) {
@@ -136,11 +89,11 @@ router.get(
 
 /**
  * GET /api/notifications/queue/stats
- * Get email queue statistics
+ * Get outbound delivery queue statistics
  */
 router.get('/queue/stats', async (_req: Request, res: Response, next: NextFunction) => {
   try {
-    const stats = await emailQueue.getStats();
+    const stats = await notificationQueue.getStats();
     res.status(200).json({ success: true, data: stats });
   } catch (error) {
     next(error);

@@ -1,9 +1,11 @@
-import db from '../config/database';
-import logger from '../config/logger';
-import { NOTIFICATION_STATUSES } from '../constants/';
-import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification';
+import db from '../config/database.js';
+import logger from '../config/logger.js';
+import { NOTIFICATION_STATUSES, type NotificationStatusId } from '../constants/index.js';
+import type { INotificationRepository } from '../interfaces/INotificationRepository.js';
+import { getErrorMessage } from '../helpers/index.js';
+import { Notification, CreateNotificationInput, NotificationStats } from '../types/notification.js';
 
-class NotificationRepository {
+export class NotificationRepository implements INotificationRepository {
   /**
    * Create a new notification record
    * @param notification - Notification data
@@ -11,7 +13,6 @@ class NotificationRepository {
    */
   async create({
     userId,
-    type,
     channel,
     subject,
     content,
@@ -20,20 +21,19 @@ class NotificationRepository {
     try {
       const result = await db.query<Notification>(
         `INSERT INTO notifications
-                     ("userId", "type", channel, subject, content, metadata)
-                 VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-        [userId, type, channel, subject, content, metadata],
+                     ("userId", channel, subject, content, metadata)
+                 VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+        [userId, channel, subject, content, metadata],
       );
 
       logger.info('Notification record created', {
         id: result.rows[0].id,
-        type,
         channel,
       });
 
       return result.rows[0];
-    } catch (error: any) {
-      logger.error('Error creating notification record', { error: error.message });
+    } catch (error: unknown) {
+      logger.error('Error creating notification record', { error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -48,7 +48,7 @@ class NotificationRepository {
    */
   async updateStatus(
     id: string,
-    statusId: number,
+    statusId: NotificationStatusId,
     errorMessage: string | null = null,
   ): Promise<boolean | void> {
     if (statusId === NOTIFICATION_STATUSES.SENDING) {
@@ -71,15 +71,15 @@ class NotificationRepository {
           logger.info('Notification claimed for processing', { id });
         }
         return claimed;
-      } catch (error: any) {
-        logger.error('Error claiming notification for processing', { id, error: error.message });
+      } catch (error: unknown) {
+        logger.error('Error claiming notification for processing', { id, error: getErrorMessage(error) });
         throw error;
       }
     } else {
       try {
         // If status is not FAILED, clear error message; if FAILED and errorMessage provided, set it
         const updates: string[] = ['"statusId" = $2'];
-        const params: any[] = [id, statusId];
+        const params: unknown[] = [id, statusId];
 
         if (statusId === NOTIFICATION_STATUSES.FAILED && errorMessage !== null) {
           updates.push('"errorMessage" = $3');
@@ -101,8 +101,8 @@ class NotificationRepository {
           statusId,
           hasError: errorMessage !== null,
         });
-      } catch (error: any) {
-        logger.error('Error updating notification status', { id, statusId, error: error.message });
+      } catch (error: unknown) {
+        logger.error('Error updating notification status', { id, statusId, error: getErrorMessage(error) });
         throw error;
       }
     }
@@ -132,8 +132,8 @@ class NotificationRepository {
       );
 
       return result.rows;
-    } catch (error: any) {
-      logger.error('Error fetching notifications by user ID', { userId, error: error.message });
+    } catch (error: unknown) {
+      logger.error('Error fetching notifications by user ID', { userId, error: getErrorMessage(error) });
       throw error;
     }
   }
@@ -171,24 +171,23 @@ class NotificationRepository {
   async getStatsByUserId(userId: string): Promise<NotificationStats[]> {
     try {
       const result = await db.query<NotificationStats>(
-        `SELECT n."type",
-                        ns.name as status,
+        `SELECT ns.name as status,
                         COUNT(*) ::int as count
                  FROM notifications n
                      LEFT JOIN notification_statuses ns
                  ON n."statusId" = ns.id
                  WHERE n."userId" = $1
-                 GROUP BY n."type", ns.name`,
+                 GROUP BY, ns.name`,
         [userId],
       );
 
       return result.rows;
-    } catch (err: any) {
+    } catch (error: unknown) {
       logger.error('Failed to fetch notification stats', {
         userId,
-        error: err.message,
+        error: getErrorMessage(error),
       });
-      throw err;
+      throw error;
     }
   }
 
@@ -215,6 +214,3 @@ class NotificationRepository {
         }
     }*/
 }
-
-// Export as singleton
-export default new NotificationRepository();

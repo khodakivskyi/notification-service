@@ -38,23 +38,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install CLI dependencies (prepublishOnly / tests)
+        run: npm ci
+        working-directory: cli
+
+      - name: Enforce releasable squash message on publish
+        run: node scripts/check-publish-releasable.mjs last-commit
+
       - name: Run Semantic Release
-        id: semantic
+        id: version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx semantic-release
-
-      - name: Get version from package.json
-        id: version
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          if git describe --exact-match --tags HEAD 2>/dev/null; then
-            VERSION=$(node -p "require('./package.json').version")
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          VERSION_BEFORE=$(node -p "require('./package.json').version")
+          npx semantic-release
+          VERSION_AFTER=$(node -p "require('./package.json').version")
+          echo "version=$VERSION_AFTER" >> $GITHUB_OUTPUT
+          if [ "$VERSION_BEFORE" != "$VERSION_AFTER" ]; then
             echo "new_release_published=true" >> $GITHUB_OUTPUT
-            echo "New version: $VERSION"
+            echo "Published: $VERSION_BEFORE -> $VERSION_AFTER"
           else
             echo "new_release_published=false" >> $GITHUB_OUTPUT
-            echo "No new release"
+            echo "No release (version still $VERSION_AFTER)"
           fi
 
   docker:

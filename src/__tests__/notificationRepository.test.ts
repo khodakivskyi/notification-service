@@ -1,15 +1,22 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import db from '../config/database';
-import notificationRepository from '../repositories/notificationRepository';
-import { NOTIFICATION_STATUSES } from '../constants/';
+import db from '../config/database.js';
+import { NotificationRepository } from '../repositories/notificationRepository.js';
 
-vi.mock('../config/database', () => ({
+const notificationRepository = new NotificationRepository();
+import { NOTIFICATION_STATUSES } from '../constants/index.js';
+
+vi.stubGlobal('process', {
+  ...process,
+  exit: vi.fn(),
+});
+
+vi.mock('../config/database.js', () => ({
   default: {
     query: vi.fn(),
   },
 }));
 
-vi.mock('../config/logger', () => ({
+vi.mock('../config/logger.js', () => ({
   default: {
     info: vi.fn(),
     error: vi.fn(),
@@ -46,7 +53,6 @@ describe('notificationRepository', () => {
 
       const result = await notificationRepository.create({
         userId: 'user-1',
-        type: 'email',
         channel: 'a@b.com',
         subject: 'Test',
         content: 'Body',
@@ -55,7 +61,7 @@ describe('notificationRepository', () => {
 
       expect(mockQuery).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO notifications'),
-        ['user-1', 'email', 'a@b.com', 'Test', 'Body', {}],
+        ['user-1', 'a@b.com', 'Test', 'Body', {}],
       );
       expect(result).toEqual(created);
     });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { NotificationService } from '../services/notificationService.js';
 import type { INotificationRepository } from '../interfaces/INotificationRepository.js';
 import { NotFoundError, ValidationError, ForbiddenError } from '../exceptions/index.js';
-import { NOTIFICATION_STATUSES } from '../constants/index.js';
+import { NOTIFICATION_STATUSES, type NotificationStatusId } from '../constants/index.js';
 
 vi.mock('../config/logger.js', () => ({
   default: {
@@ -93,7 +93,7 @@ describe('notificationService', () => {
     });
 
     it('throws NotFoundError for invalid statusId', async () => {
-      await expect(service.updateStatus('id-1', 999)).rejects.toThrow(NotFoundError);
+      await expect(service.updateStatus('id-1', 999 as NotificationStatusId)).rejects.toThrow(NotFoundError);
       expect(repository.updateStatus).not.toHaveBeenCalled();
     });
   });

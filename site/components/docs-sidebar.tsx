@@ -4,15 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { type Locale } from "@/lib/i18n";
-import { getDocsByCategory } from "@/lib/docs";
+import type { DocMeta } from "@/lib/docs";
 
 interface DocsSidebarProps {
   lang: Locale;
+  categories: Record<string, DocMeta[]>;
 }
 
-export function DocsSidebar({ lang }: DocsSidebarProps) {
+export function DocsSidebar({ lang, categories }: DocsSidebarProps) {
   const pathname = usePathname();
-  const categories = getDocsByCategory();
 
   const categoryOrder = ["Core", "Development", "Operations"];
 

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bell, Github } from "lucide-react";
+import { Bell, GitBranch } from "lucide-react";
 import { type Locale, t } from "@/lib/i18n";
 
 interface FooterProps {
@@ -37,7 +37,7 @@ export function Footer({ lang }: FooterProps) {
             rel="noopener noreferrer"
             className="flex items-center gap-1 hover:text-foreground transition-colors"
           >
-            <Github className="size-3.5" aria-hidden="true" />
+            <GitBranch className="size-3.5" aria-hidden="true" />
             <span className="sr-only">GitHub</span>
             GitHub
           </a>

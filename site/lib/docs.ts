@@ -17,6 +17,13 @@ export interface DocPage {
 const CONTENT_DIR = path.join(process.cwd(), "content");
 const DOCS_DIR = path.join(CONTENT_DIR, "docs");
 
+// Ensure content dir exists at build time
+function ensureContentDir() {
+  if (!fs.existsSync(DOCS_DIR)) {
+    fs.mkdirSync(DOCS_DIR, { recursive: true });
+  }
+}
+
 // Maps slug → human title and category
 export const DOC_META: Record<string, { title: string; category: string }> = {
   index: { title: "Documentation Home", category: "Core" },
@@ -32,10 +39,12 @@ export const DOC_META: Record<string, { title: string; category: string }> = {
 };
 
 export function getAllDocSlugs(): string[] {
+  ensureContentDir();
   return Object.keys(DOC_META);
 }
 
 export function getDocPage(slug: string): DocPage | null {
+  ensureContentDir();
   const filePath = path.join(DOCS_DIR, `${slug}.md`);
   if (!fs.existsSync(filePath)) return null;
   const content = fs.readFileSync(filePath, "utf-8");
@@ -44,12 +53,14 @@ export function getDocPage(slug: string): DocPage | null {
 }
 
 export function getContentFile(name: string): string {
+  ensureContentDir();
   const filePath = path.join(CONTENT_DIR, `${name}.md`);
   if (!fs.existsSync(filePath)) return "";
   return fs.readFileSync(filePath, "utf-8");
 }
 
 export function getDocsByCategory(): Record<string, DocMeta[]> {
+  ensureContentDir();
   const result: Record<string, DocMeta[]> = {};
   for (const [slug, meta] of Object.entries(DOC_META)) {
     if (!result[meta.category]) result[meta.category] = [];

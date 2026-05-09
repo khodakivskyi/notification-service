@@ -1,6 +1,7 @@
 import { type Locale } from "@/lib/i18n";
 import { DocsSidebar } from "@/components/docs-sidebar";
 import { SearchBar } from "@/components/search-bar";
+import { getDocsByCategory } from "@/lib/docs";
 
 interface DocsLayoutProps {
   children: React.ReactNode;
@@ -10,6 +11,7 @@ interface DocsLayoutProps {
 export default async function DocsLayout({ children, params }: DocsLayoutProps) {
   const { lang } = await params;
   const locale = lang as Locale;
+  const categories = getDocsByCategory();
 
   return (
     <div className="mx-auto flex w-full max-w-7xl gap-0">
@@ -19,7 +21,7 @@ export default async function DocsLayout({ children, params }: DocsLayoutProps) 
           <div className="pt-4 pb-2">
             <SearchBar lang={locale} />
           </div>
-          <DocsSidebar lang={locale} />
+          <DocsSidebar lang={locale} categories={categories} />
         </div>
       </aside>
 

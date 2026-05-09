@@ -14,9 +14,9 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          pre({ children, ...props }) {
+          pre({ children, ...props }: any) {
             // Extract text from the code element inside pre
-            const codeEl = (children as React.ReactElement)?.props;
+            const codeEl: any = (children as React.ReactElement)?.props || {};
             const codeText: string =
               typeof codeEl?.children === "string"
                 ? codeEl.children
@@ -32,7 +32,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             );
           },
           // Override anchor to open external links in new tab
-          a({ href, children, ...props }) {
+          a({ href, children, ...props }: any) {
             const isExternal = href?.startsWith("http");
             return (
               <a

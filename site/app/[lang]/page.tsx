@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Github,
+  GitBranch,
   Zap,
   RefreshCw,
   Database,
@@ -117,7 +117,7 @@ export default async function HomePage({ params }: HomePageProps) {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 rounded-md border border-border bg-background px-5 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
               >
-                <Github className="size-3.5" aria-hidden="true" />
+                <GitBranch className="size-3.5" aria-hidden="true" />
                 {t(locale, "home.cta.github")}
               </a>
             </div>

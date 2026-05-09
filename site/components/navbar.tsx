@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import { Moon, Sun, Menu, X, Github, Bell } from "lucide-react";
+import { Moon, Sun, Menu, X, GitBranch, Bell } from "lucide-react";
 import { useTheme } from "next-themes";
 import { type Locale, locales, t } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -99,7 +99,7 @@ export function Navbar({ lang, hasChangelog = true }: NavbarProps) {
             aria-label="View on GitHub"
             className="hidden sm:flex items-center justify-center size-8 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
           >
-            <Github className="size-4" aria-hidden="true" />
+            <GitBranch className="size-4" aria-hidden="true" />
           </a>
 
           {/* Theme toggle */}
@@ -167,7 +167,7 @@ export function Navbar({ lang, hasChangelog = true }: NavbarProps) {
               rel="noopener noreferrer"
               className="ml-auto flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
             >
-              <Github className="size-3" aria-hidden="true" />
+              <GitBranch className="size-3" aria-hidden="true" />
               GitHub
             </a>
           </div>

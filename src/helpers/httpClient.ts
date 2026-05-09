@@ -1,6 +1,6 @@
 import * as https from 'https';
 import * as http from 'http';
-import logger from '../config/logger.js';
+import logger from '../config/logger';
 
 export interface HttpClientOptions {
   timeout?: number;
@@ -54,13 +54,8 @@ class HttpClient {
       timeout,
     };
 
-    const postData = body
-      ? typeof body === 'string'
-        ? body
-        : JSON.stringify(body)
-      : undefined;
-
-    if (postData !== undefined) {
+    if (body) {
+      const postData = typeof body === 'string' ? body : JSON.stringify(body);
       requestOptions.headers = {
         ...requestOptions.headers,
         'Content-Type': 'application/json',
@@ -94,7 +89,8 @@ class HttpClient {
         reject(error);
       });
 
-      if (postData !== undefined) {
+      if (body) {
+        const postData = typeof body === 'string' ? body : JSON.stringify(body);
         req.write(postData);
       }
 

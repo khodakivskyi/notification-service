@@ -1,17 +1,16 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "Node16",
+    "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
-    "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "moduleResolution": "node16",
+    "moduleResolution": "node",
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
@@ -22,10 +21,13 @@
     "allowJs": false
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.js", "cli/**/*"],
+  "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.test.js"],
   "ts-node": {
-    "esm": true,
     "transpileOnly": true,
-    "files": true
+    "files": true,
+    "compilerOptions": {
+      "module": "commonjs",
+      "esModuleInterop": true
+    }
   }
 }

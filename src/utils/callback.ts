@@ -1,5 +1,5 @@
-import { httpClient } from '../helpers/index.js';
-import logger from '../config/logger.js';
+import httpClient from '../helpers/httpClient';
+import logger from '../config/logger';
 
 export interface CallbackResponse {
   statusCode: number;

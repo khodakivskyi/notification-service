@@ -1,10 +1,8 @@
 name: Release and Publish to GHCR
 
 on:
-  workflow_run:
-    workflows: [ "Integration" ]
-    types:
-      - completed
+  push:
+    branches: [ publish ]
 
 env:
   REGISTRY: ghcr.io
@@ -12,9 +10,6 @@ env:
 
 jobs:
   release:
-    if: >
-      github.event.workflow_run.conclusion == 'success' &&
-      github.event.workflow_run.head_branch == 'publish'
     name: Semantic Release
     runs-on: ubuntu-latest
     permissions:
@@ -44,20 +39,22 @@ jobs:
         run: npm ci
 
       - name: Run Semantic Release
-        id: version
+        id: semantic
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx semantic-release
+
+      - name: Get version from package.json
+        id: version
         run: |
-          VERSION_BEFORE=$(node -p "require('./package.json').version")
-          npx semantic-release
-          VERSION_AFTER=$(node -p "require('./package.json').version")
-          echo "version=$VERSION_AFTER" >> $GITHUB_OUTPUT
-          if [ "$VERSION_BEFORE" != "$VERSION_AFTER" ]; then
+          if git describe --exact-match --tags HEAD 2>/dev/null; then
+            VERSION=$(node -p "require('./package.json').version")
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
             echo "new_release_published=true" >> $GITHUB_OUTPUT
-            echo "Published: $VERSION_BEFORE -> $VERSION_AFTER"
+            echo "New version: $VERSION"
           else
             echo "new_release_published=false" >> $GITHUB_OUTPUT
-            echo "No release (version still $VERSION_AFTER)"
+            echo "No new release"
           fi
 
   docker:

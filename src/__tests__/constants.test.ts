@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ANONYMOUS_USER_ID, NOTIFICATION_STATUSES, isValidStatusId } from '../constants/index.js';
+import { ANONYMOUS_USER_ID, NOTIFICATION_STATUSES, isValidStatusId } from '../constants/';
 
 describe('constants', () => {
   describe('NOTIFICATION_STATUSES', () => {

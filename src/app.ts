@@ -1,10 +1,10 @@
 import express from 'express';
-import healthRoutes from './routes/health';
-import notificationRoutes from './routes/notifications';
-import errorHandler from './middleware/errorHandler';
-import rateLimitHandler from './middleware/rateLimitHandler';
-import config from './config/env';
-import authenticate from './middleware/auth';
+import healthRoutes from './routes/health.js';
+import notificationRoutes from './routes/notifications.js';
+import errorHandler from './middleware/errorHandler.js';
+import rateLimitHandler from './middleware/rateLimitHandler.js';
+import config from './config/env.js';
+import authenticate from './middleware/auth.js';
 
 const app = express();
 

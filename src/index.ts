@@ -1,56 +1,38 @@
-import app from './app';
-import config from './config/env';
-import logger from './config/logger';
-import db from './config/database';
-import rabbitMQConnection from './config/rabbitmq';
-import emailQueue from './queues/emailQueue';
+import app from './app.js';
+import config from './config/env.js';
+import logger from './config/logger.js';
+import db from './config/database.js';
+import rabbitMQConnection from './config/rabbitmq.js';
+import notificationQueue from './queues/notificationQueue.js';
 import { Server } from 'http';
+import { runMigrations } from './utils/migrationRunner.js';
+import { createShutdownHandler } from './utils/shutdown.js';
 
 const server: Server = app.listen(config.server.port, async () => {
   try {
-    // Connect RabbitMQ
+    await db.connect();
+    await runMigrations();
     await rabbitMQConnection.connect();
-    await emailQueue.init();
+    await notificationQueue.init();
 
     logger.info('🚀 Notification service started', {
       port: config.server.port,
       env: config.env,
     });
-  } catch (error: any) {
-    logger.error('❌ Failed to initialize RabbitMQ', { error });
+  } catch (error: unknown) {
+    logger.error('❌ Initialization failed', {
+      error: error instanceof Error ? error.stack : error,
+    });
     process.exit(1);
   }
 });
 
-// Graceful shutdown
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+const shutdown = createShutdownHandler({
+  label: 'notification service',
+  httpServer: server,
+  closeRabbitMQ: () => rabbitMQConnection.close(),
+  closeDatabase: () => db.close(),
+});
 
-async function shutdown(): Promise<void> {
-  logger.info('🔻 Shutting down notification service...');
-
-  server.close(async () => {
-    try {
-      await rabbitMQConnection.close();
-      logger.info('✅ RabbitMQ connection closed');
-    } catch (error: any) {
-      logger.error('Error closing RabbitMQ connection', { error });
-    }
-
-    try {
-      await db.close();
-      logger.info('✅ Database pool closed');
-    } catch (error: any) {
-      logger.error('Error closing database pool', { error });
-    }
-
-    logger.info('✅ HTTP server closed');
-    process.exit(0);
-  });
-
-  // Force shutdown after 10 seconds
-  setTimeout(() => {
-    logger.error('❌ Forced shutdown after timeout');
-    process.exit(1);
-  }, 10000);
-}
+process.on('SIGTERM', () => void shutdown());
+process.on('SIGINT', () => void shutdown());

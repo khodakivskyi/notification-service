@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import rabbitMQConnection from '../config/rabbitmq.js';
-import emailQueue from '../queues/emailQueue.js';
+import notificationQueue from '../queues/notificationQueue.js';
 import config from '../config/env.js';
 
 vi.mock('../config/logger.js', () => ({
@@ -38,7 +38,7 @@ function createPublishChannelMock() {
   };
 }
 
-describe('emailQueue', () => {
+describe('notificationQueue', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -48,25 +48,25 @@ describe('emailQueue', () => {
       const ch = createConsumeChannelMock();
       mockGetConsumeChannel.mockResolvedValueOnce(ch as never);
 
-      await emailQueue.init();
+      await notificationQueue.init();
 
       expect(ch.assertExchange).toHaveBeenCalledWith(config.rabbitmq.exchanges.dlx, 'direct', {
         durable: true,
       });
-      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.emailDlq, { durable: true });
-      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.email, {
+      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.outboundDlq, { durable: true });
+      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.outbound, {
         durable: true,
         arguments: {
-          'x-max-length': config.rabbitmq.settings.maxLength,
+          'x-max-length': config.rabbitmq.settings.outboundMaxLength,
           'x-dead-letter-exchange': config.rabbitmq.exchanges.dlx,
-          'x-dead-letter-routing-key': config.rabbitmq.routingKeys.emailDlq,
+          'x-dead-letter-routing-key': config.rabbitmq.routingKeys.outboundDlq,
         },
       });
-      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.emailRetry, {
+      expect(ch.assertQueue).toHaveBeenCalledWith(config.rabbitmq.queues.outboundRetry, {
         durable: true,
         arguments: {
           'x-dead-letter-exchange': '',
-          'x-dead-letter-routing-key': config.rabbitmq.queues.email,
+          'x-dead-letter-routing-key': config.rabbitmq.queues.outbound,
         },
       });
     });
@@ -77,7 +77,7 @@ describe('emailQueue', () => {
       const publishCh = createPublishChannelMock();
       mockGetPublishChannel.mockResolvedValueOnce(publishCh as never);
 
-      const ok = await emailQueue.addJob({
+      const ok = await notificationQueue.addJob({
         to: 'user@example.com',
         subject: 'Hi',
         htmlContent: '<p>x</p>',
@@ -86,7 +86,7 @@ describe('emailQueue', () => {
 
       expect(ok).toBe(true);
       expect(publishCh.sendToQueue).toHaveBeenCalledWith(
-        config.rabbitmq.queues.email,
+        config.rabbitmq.queues.outbound,
         expect.any(Buffer),
         {
           persistent: true,
@@ -109,14 +109,14 @@ describe('emailQueue', () => {
       });
       mockGetConsumeChannel.mockResolvedValueOnce(ch as never);
 
-      const stats = await emailQueue.getStats();
+      const stats = await notificationQueue.getStats();
 
       expect(stats).toEqual({
-        queue: config.rabbitmq.queues.email,
+        queue: config.rabbitmq.queues.outbound,
         messageCount: 5,
         consumerCount: 2,
       });
-      expect(ch.checkQueue).toHaveBeenCalledWith(config.rabbitmq.queues.email);
+      expect(ch.checkQueue).toHaveBeenCalledWith(config.rabbitmq.queues.outbound);
     });
 
     it('returns null when checkQueue fails', async () => {
@@ -125,7 +125,7 @@ describe('emailQueue', () => {
       });
       mockGetConsumeChannel.mockResolvedValueOnce(ch as never);
 
-      await expect(emailQueue.getStats()).resolves.toBeNull();
+      await expect(notificationQueue.getStats()).resolves.toBeNull();
     });
   });
 });

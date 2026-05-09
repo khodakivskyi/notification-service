@@ -5,30 +5,27 @@ import { NOTIFICATION_STATUSES } from '../constants/index.js';
 import { ValidationError } from '../exceptions/index.js';
 import { getErrorMessage } from '../helpers/index.js';
 import { callCallback } from '../utils/callback.js';
-import emailQueue, { EmailJob } from './emailQueue.js';
+import notificationQueue, { NotificationJob } from './notificationQueue.js';
 import { Notification } from '../types/notification.js';
 import * as amqp from 'amqplib';
-import type { IEmailTransport } from '../interfaces/IEmailTransport.js';
+import type { INotificationChannel } from '../interfaces/INotificationChannel.js';
 import type { INotificationService } from '../interfaces/INotificationService.js';
 
-export class EmailWorker {
+export class NotificationWorker {
   private readonly queueName: string;
   private isRunning: boolean;
 
   constructor(
     private readonly notifications: INotificationService,
-    private readonly mail: IEmailTransport,
+    private readonly channel: INotificationChannel,
   ) {
-    this.queueName = config.rabbitmq.queues.email;
+    this.queueName = config.rabbitmq.queues.outbound;
     this.isRunning = false;
   }
 
-  /**
-   * Start worker
-   */
   async start(): Promise<void> {
     if (this.isRunning) {
-      logger.info('EmailWorker is already running.');
+      logger.info('NotificationWorker is already running.');
       return;
     }
 
@@ -36,11 +33,11 @@ export class EmailWorker {
       const consumeChannel = await rabbitMQConnection.getConsumeChannel();
       const publishChannel = await rabbitMQConnection.getPublishChannel();
 
-      await emailQueue.init();
+      await notificationQueue.init();
 
       await consumeChannel.prefetch(1);
 
-      logger.info('🚀 Email worker started', { queue: this.queueName });
+      logger.info('🚀 Notification worker started', { queue: this.queueName });
 
       this.isRunning = true;
 
@@ -54,14 +51,11 @@ export class EmailWorker {
         { noAck: false },
       );
     } catch (error: unknown) {
-      logger.error('Failed to start EmailWorker', { error: getErrorMessage(error) });
+      logger.error('Failed to start NotificationWorker', { error: getErrorMessage(error) });
       throw error;
     }
   }
 
-  /**
-   * Process message
-   */
   async processMessage(
     msg: amqp.ConsumeMessage,
     consumeChannel: amqp.Channel,
@@ -80,8 +74,8 @@ export class EmailWorker {
     }
   }
 
-  parseAndValidateMessage(msg: amqp.ConsumeMessage, consumeChannel: amqp.Channel): EmailJob | null {
-    let job: EmailJob;
+  parseAndValidateMessage(msg: amqp.ConsumeMessage, consumeChannel: amqp.Channel): NotificationJob | null {
+    let job: NotificationJob;
 
     try {
       job = JSON.parse(msg.content.toString());
@@ -107,7 +101,7 @@ export class EmailWorker {
   /**
    * @returns true if job was skipped (already processed by another worker)
    */
-  async executeJob(job: EmailJob): Promise<boolean> {
+  async executeJob(job: NotificationJob): Promise<boolean> {
     const notificationId = job.data.notificationId;
     const claimed = await this.notifications.updateStatus(notificationId, NOTIFICATION_STATUSES.SENDING);
     if (!claimed) {
@@ -117,19 +111,23 @@ export class EmailWorker {
       return true;
     }
 
-    logger.info('Processing job', {
+    logger.info('Processing delivery job', {
       timestamp: job.timestamp,
       notificationId,
     });
 
-    await this.mail.sendNotification(job.data.to, job.data.subject!, job.data.htmlContent!);
+    await this.channel.send(
+      job.data.to,
+      job.data.subject ?? '',
+      job.data.htmlContent ?? '',
+    );
 
     await this.notifications.updateStatus(notificationId, NOTIFICATION_STATUSES.SENT);
     return false;
   }
 
   async handleSuccess(
-    job: EmailJob,
+    job: NotificationJob,
     msg: amqp.ConsumeMessage,
     consumeChannel: amqp.Channel,
     startTime: number,
@@ -160,7 +158,7 @@ export class EmailWorker {
   }
 
   async handleError(
-    job: EmailJob,
+    job: NotificationJob,
     error: unknown,
     msg: amqp.ConsumeMessage,
     consumeChannel: amqp.Channel,
@@ -205,7 +203,7 @@ export class EmailWorker {
   }
 
   private async markNotificationFailed(
-    job: EmailJob,
+    job: NotificationJob,
     errorMessage: string,
     currentRetries: number,
     maxRetries: number,
@@ -266,15 +264,15 @@ export class EmailWorker {
     return { willRetry, isNonRetriable };
   }
 
-  async retryJob(job: EmailJob, publishChannel: amqp.ConfirmChannel): Promise<void> {
+  async retryJob(job: NotificationJob, publishChannel: amqp.ConfirmChannel): Promise<void> {
     const delay = this.getRetryDelay(job.retries);
 
     publishChannel.sendToQueue(
-      config.rabbitmq.queues.emailRetry,
+      config.rabbitmq.queues.outboundRetry,
       Buffer.from(JSON.stringify(job)),
       {
         persistent: true,
-        expiration: String(delay), // ms
+        expiration: String(delay),
       },
     );
 
@@ -288,13 +286,13 @@ export class EmailWorker {
   }
 
   getRetryDelay(retries: number): number {
-    const baseDelay = 1000; // 1s
-    const maxDelay = 60_000; // 1 min cap
+    const baseDelay = 1000;
+    const maxDelay = 60_000;
 
     return Math.min(baseDelay * 2 ** (retries - 1), maxDelay);
   }
 
-  async sendCallback(job: EmailJob, notification: Notification, errorMessage?: string): Promise<void> {
+  async sendCallback(job: NotificationJob, notification: Notification, errorMessage?: string): Promise<void> {
     if (!job?.data?.callbackUrl) return;
 
     try {
@@ -321,11 +319,8 @@ export class EmailWorker {
     }
   }
 
-  /**
-   * Stop worker gracefully
-   */
   async stop(): Promise<void> {
     this.isRunning = false;
-    logger.info('Email worker stopped');
+    logger.info('Notification worker stopped');
   }
 }

@@ -76,7 +76,7 @@ services:
     command: [ "node", "dist/index.js" ]
 
   # ============================================
-  # Email Workers
+  # Notification delivery workers (queue consumers)
   # ============================================
   workers:
     build:

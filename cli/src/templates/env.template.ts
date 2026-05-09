@@ -39,6 +39,13 @@ export function buildEnvTemplate(answers: SetupAnswers): string {
     '',
     '# RabbitMQ',
     `RABBITMQ_URL=amqp://${rabbitUser}:${rabbitPassword}@${rabbitHost}:${rabbitPort}`,
+    'RABBITMQ_DLX_EXCHANGE=notification.dlx',
+    'OUTBOUND_QUEUE_NAME=email_notifications',
+    'OUTBOUND_DLQ_NAME=email.dlq',
+    'OUTBOUND_DLQ_ROUTING_KEY=email.dlq',
+    'OUTBOUND_RETRY_QUEUE_NAME=email.retry',
+    'RABBITMQ_OUTBOUND_TTL=300000',
+    'RABBITMQ_OUTBOUND_MAX_LENGTH=10000',
 
     '',
     '# SMTP',

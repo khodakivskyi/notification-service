@@ -29,13 +29,13 @@ const envSchema = Joi.object({
   RATE_LIMIT_BLOCK_DURATION: Joi.number().integer().min(1).default(60),
 
   RABBITMQ_URL: Joi.string().uri().required(),
-  EMAIL_QUEUE_NAME: Joi.string().default('email_notifications'),
+  OUTBOUND_QUEUE_NAME: Joi.string().default('email_notifications'),
   RABBITMQ_DLX_EXCHANGE: Joi.string().trim().min(1).default('notification.dlx'),
-  EMAIL_DLQ_NAME: Joi.string().trim().min(1).default('email.dlq'),
-  EMAIL_DLQ_ROUTING_KEY: Joi.string().trim().min(1).default('email.dlq'),
-  EMAIL_RETRY_QUEUE_NAME: Joi.string().trim().min(1).default('email.retry'),
-  RABBITMQ_EMAIL_TTL: Joi.number().integer().min(1000).default(300000),
-  RABBITMQ_EMAIL_MAX_LENGTH: Joi.number().integer().min(1).default(10000),
+  OUTBOUND_DLQ_NAME: Joi.string().trim().min(1).default('email.dlq'),
+  OUTBOUND_DLQ_ROUTING_KEY: Joi.string().trim().min(1).default('email.dlq'),
+  OUTBOUND_RETRY_QUEUE_NAME: Joi.string().trim().min(1).default('email.retry'),
+  RABBITMQ_OUTBOUND_TTL: Joi.number().integer().min(1000).default(300000),
+  RABBITMQ_OUTBOUND_MAX_LENGTH: Joi.number().integer().min(1).default(10000),
 }).unknown();
 
 // .env validation
@@ -86,16 +86,16 @@ export default {
       dlx: env.RABBITMQ_DLX_EXCHANGE,
     },
     queues: {
-      email: env.EMAIL_QUEUE_NAME,
-      emailRetry: env.EMAIL_RETRY_QUEUE_NAME,
-      emailDlq: env.EMAIL_DLQ_NAME,
+      outbound: env.OUTBOUND_QUEUE_NAME,
+      outboundRetry: env.OUTBOUND_RETRY_QUEUE_NAME,
+      outboundDlq: env.OUTBOUND_DLQ_NAME,
     },
     routingKeys: {
-      emailDlq: env.EMAIL_DLQ_ROUTING_KEY,
+      outboundDlq: env.OUTBOUND_DLQ_ROUTING_KEY,
     },
     settings: {
-      ttl: env.RABBITMQ_EMAIL_TTL,
-      maxLength: env.RABBITMQ_EMAIL_MAX_LENGTH,
+      outboundTtl: env.RABBITMQ_OUTBOUND_TTL,
+      outboundMaxLength: env.RABBITMQ_OUTBOUND_MAX_LENGTH,
     },
   },
 };

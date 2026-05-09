@@ -1,7 +1,7 @@
 import logger from './config/logger.js';
 import rabbitMQConnection from './config/rabbitmq.js';
-import emailQueue from './queues/emailQueue.js';
-import { emailWorker } from './container.js';
+import notificationQueue from './queues/notificationQueue.js';
+import { notificationWorker } from './container.js';
 import db from './config/database.js';
 import { createShutdownHandler } from './utils/shutdown.js';
 
@@ -15,14 +15,14 @@ async function startWorkers(): Promise<void> {
 
     await db.connect();
     await rabbitMQConnection.connect();
-    await emailQueue.init();
-    await emailWorker.start();
+    await notificationQueue.init();
+    await notificationWorker.start();
 
     logger.info('All workers started successfully');
 
     const shutdown = createShutdownHandler({
       label: 'workers',
-      stopWorker: () => emailWorker.stop(),
+      stopWorker: () => notificationWorker.stop(),
       closeRabbitMQ: () => rabbitMQConnection.close(),
       closeDatabase: () => db.close(),
     });

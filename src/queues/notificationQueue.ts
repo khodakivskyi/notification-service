@@ -3,7 +3,8 @@ import config from '../config/env.js';
 import logger from '../config/logger.js';
 import { getErrorMessage } from '../helpers/index.js';
 
-export interface EmailJobData {
+/** Payload for a single outbound delivery job (channel interprets `to` / content). */
+export interface NotificationJobPayload {
   to: string;
   subject?: string;
   htmlContent?: string;
@@ -12,56 +13,48 @@ export interface EmailJobData {
   userId?: string | null;
 }
 
-export interface EmailJob {
-  data: EmailJobData;
+export interface NotificationJob {
+  data: NotificationJobPayload;
   timestamp: number;
   retries: number;
 }
 
 /**
- * Email Queue for handling email jobs
+ * RabbitMQ queue for asynchronous notification delivery (any INotificationChannel).
  */
-class EmailQueue {
+class NotificationQueue {
   private readonly queueName: string;
 
   constructor() {
-    this.queueName = config.rabbitmq.queues.email;
+    this.queueName = config.rabbitmq.queues.outbound;
   }
 
-  /**
-   * Initialize queue (create if not exists)
-   */
   async init(): Promise<void> {
     try {
       const consumeChannel = await rabbitMQConnection.getConsumeChannel();
 
-      // DLX (Dead Letter Exchange) - where RabbitMQ routes dead messages
       await consumeChannel.assertExchange(config.rabbitmq.exchanges.dlx, 'direct', {
         durable: true,
       });
 
-      // DLQ (Dead Letter Queue) - where dead messages are stored
-      await consumeChannel.assertQueue(config.rabbitmq.queues.emailDlq, { durable: true });
+      await consumeChannel.assertQueue(config.rabbitmq.queues.outboundDlq, { durable: true });
 
-      // Bind DLQ to DLX using a routing key
       const dlx = String(config.rabbitmq.exchanges.dlx);
-      const dlq = String(config.rabbitmq.queues.emailDlq);
-      const dlqKey = String(config.rabbitmq.routingKeys.emailDlq);
+      const dlq = String(config.rabbitmq.queues.outboundDlq);
+      const dlqKey = String(config.rabbitmq.routingKeys.outboundDlq);
 
       await consumeChannel.bindQueue(dlq, dlx, dlqKey);
 
-      // Main email queue configured with DLX settings
       await consumeChannel.assertQueue(this.queueName, {
         durable: true,
         arguments: {
-          'x-max-length': config.rabbitmq.settings.maxLength,
+          'x-max-length': config.rabbitmq.settings.outboundMaxLength,
           'x-dead-letter-exchange': config.rabbitmq.exchanges.dlx,
-          'x-dead-letter-routing-key': config.rabbitmq.routingKeys.emailDlq,
+          'x-dead-letter-routing-key': config.rabbitmq.routingKeys.outboundDlq,
         },
       });
 
-      // Retry queue
-      await consumeChannel.assertQueue(config.rabbitmq.queues.emailRetry, {
+      await consumeChannel.assertQueue(config.rabbitmq.queues.outboundRetry, {
         durable: true,
         arguments: {
           'x-dead-letter-exchange': '',
@@ -69,32 +62,22 @@ class EmailQueue {
         },
       });
 
-      logger.info('Email queue initialized', {
+      logger.info('Notification delivery queue initialized', {
         queue: this.queueName,
         dlx: config.rabbitmq.exchanges.dlx,
-        dlq: config.rabbitmq.queues.emailDlq,
+        dlq: config.rabbitmq.queues.outboundDlq,
       });
     } catch (error: unknown) {
-      logger.error('Failed to initialize email queue', { error: getErrorMessage(error) });
+      logger.error('Failed to initialize notification delivery queue', { error: getErrorMessage(error) });
       throw error;
     }
   }
 
-  /**
-   * Add generic notification to the queue
-   */
-  async addNotificationEmail(data: EmailJobData): Promise<boolean> {
-    return this.addJob(data);
-  }
-
-  /**
-   * Generic method for adding job
-   */
-  async addJob(data: EmailJobData): Promise<boolean> {
+  async addJob(data: NotificationJobPayload): Promise<boolean> {
     try {
       const publishChannel = await rabbitMQConnection.getPublishChannel();
 
-      const job: EmailJob = {
+      const job: NotificationJob = {
         data,
         timestamp: Date.now(),
         retries: 0,
@@ -108,7 +91,7 @@ class EmailQueue {
       });
 
       await publishChannel.waitForConfirms();
-      logger.info('Job added to queue', { to: data.to });
+      logger.info('Delivery job added to queue', { to: data.to });
       return true;
     } catch (error: unknown) {
       logger.error('Failed to add job to queue', {
@@ -118,9 +101,6 @@ class EmailQueue {
     }
   }
 
-  /**
-   * Get queue statistics
-   */
   async getStats(): Promise<{ queue: string; messageCount: number; consumerCount: number } | null> {
     try {
       const consumeChannel = await rabbitMQConnection.getConsumeChannel();
@@ -137,6 +117,5 @@ class EmailQueue {
   }
 }
 
-// Export as singleton
-const emailQueue = new EmailQueue();
-export default emailQueue;
+const notificationQueue = new NotificationQueue();
+export default notificationQueue;

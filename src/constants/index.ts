@@ -1,2 +1,2 @@
-export * from './notificationStatuses.js';
-export * from './system.js';
+export * from './notificationStatuses';
+export * from './system';

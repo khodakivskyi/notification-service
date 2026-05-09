@@ -166,12 +166,12 @@ export class EmailWorker {
     consumeChannel: amqp.Channel,
     publishChannel: amqp.ConfirmChannel,
   ): Promise<void> {
+    const errorMessage = getErrorMessage(error);
     logger.error('Job failed', {
-      error: getErrorMessage(error),
+      error: errorMessage,
       retries: job?.retries || 0,
     });
 
-    // Retry logic
     const maxRetries = 3;
     const currentRetries = job?.retries || 0;
     const notificationId = job?.data?.notificationId;
@@ -187,38 +187,12 @@ export class EmailWorker {
 
       job.retries = currentRetries + 1;
     } else {
-      if (isNonRetriable) {
-        logger.error('Non-retriable error, marking failed', {
-          error: getErrorMessage(error),
-        });
-      } else {
-        logger.error('Max retries reached, marking failed', {
-          retries: currentRetries,
-          maxRetries,
-          error: getErrorMessage(error),
-        });
-      }
-
-      await this.notifications.updateStatus(
-        job.data.notificationId,
-        NOTIFICATION_STATUSES.FAILED,
-        getErrorMessage(error),
-      );
+      await this.markNotificationFailed(job, errorMessage, currentRetries, maxRetries, isNonRetriable);
     }
 
-    // Evoke callback (if exists)
     if (job?.data?.callbackUrl && notificationId) {
-      try {
-        const notification = await this.notifications.getById(notificationId);
-        await this.sendCallback(job, notification, getErrorMessage(error));
-      } catch {
-        // fallback: send callback without notification object
-        await this.sendCallback(
-          job,
-          { id: notificationId } as Notification,
-          getErrorMessage(error),
-        );
-      }
+      const notification = await this.getNotificationOrStubForCallback(notificationId);
+      await this.sendCallback(job, notification, errorMessage);
     }
 
     if (willRetry) {
@@ -227,8 +201,41 @@ export class EmailWorker {
       return;
     }
 
-    // willRetry === false => dead-letter
     consumeChannel.nack(msg, false, false);
+  }
+
+  private async markNotificationFailed(
+    job: EmailJob,
+    errorMessage: string,
+    currentRetries: number,
+    maxRetries: number,
+    isNonRetriable: boolean,
+  ): Promise<void> {
+    if (isNonRetriable) {
+      logger.error('Non-retriable error, marking failed', {
+        error: errorMessage,
+      });
+    } else {
+      logger.error('Max retries reached, marking failed', {
+        retries: currentRetries,
+        maxRetries,
+        error: errorMessage,
+      });
+    }
+
+    await this.notifications.updateStatus(
+      job.data.notificationId,
+      NOTIFICATION_STATUSES.FAILED,
+      errorMessage,
+    );
+  }
+
+  private async getNotificationOrStubForCallback(notificationId: string): Promise<Notification> {
+    try {
+      return await this.notifications.getById(notificationId);
+    } catch {
+      return { id: notificationId } as Notification;
+    }
   }
 
   shouldRetry(

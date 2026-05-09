@@ -11,14 +11,12 @@ GET http://localhost:3001/api/ready
 Accept: application/json
 #x-api-key: key here
 
-###
-POST http://localhost:3001/api/notifications/send
+### Send verification email
+POST http://localhost:3001/api/notifications/send-verification
 Content-Type: application/json
-x-api-key: 12345678901234567890123456789012
 
 {
   "email": "insoleg918@gmail.com",
-  "subject": "Welcome to our service!",
-  "htmlContent": "<h1>Hello TestUser!</h1><p>This is a notification email.</p>",
-  "callbackUrl": "https://example.com/notifications/callback"
+  "username": "TestUser",
+  "verificationLink": "https://example.com/verify/12345"
 }

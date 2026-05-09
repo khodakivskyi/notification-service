@@ -1,3 +1,0 @@
-export interface INotificationChannel {
-  send(to: string, subject: string, content: string): Promise<void>;
-}

@@ -1,7 +1,7 @@
 # ============================================
 # Build stage – compile TypeScript to dist/
 # ============================================
-FROM node:24-alpine AS builder
+FROM node:18-alpine AS builder
 
 WORKDIR /app
 
@@ -9,13 +9,12 @@ COPY package*.json tsconfig.json ./
 RUN npm ci
 
 COPY src ./src
-COPY migrations ./migrations
 RUN npm run build
 
 # ============================================
 # Production stage – run compiled JS
 # ============================================
-FROM node:24-alpine
+FROM node:18-alpine
 
 WORKDIR /app
 
@@ -28,7 +27,6 @@ COPY package*.json ./
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/migrations ./migrations
 RUN mkdir -p logs && chown -R nodejs:nodejs /app
 
 USER nodejs

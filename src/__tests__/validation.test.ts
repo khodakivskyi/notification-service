@@ -7,8 +7,8 @@ import {
   validateUrl,
   isValidUuid,
   validateUuid,
-} from '../helpers/index.js';
-import { ValidationError } from '../exceptions/index.js';
+} from '../helpers/';
+import { ValidationError } from '../exceptions';
 
 describe('validation', () => {
   describe('validateRequiredFields', () => {

@@ -2,11 +2,11 @@
  * Notification Status IDs
  */
 export const NOTIFICATION_STATUSES = {
-  QUEUED: 1,
-  SENDING: 2,
-  SENT: 3,
-  FAILED: 4,
-  RETRYING: 5,
+  QUEUED: 1, // 'queued'
+  SENDING: 2, // 'sending'
+  SENT: 3, // 'sent'
+  FAILED: 4, // 'failed'
+  RETRYING: 5, // 'retrying'
 } as const;
 
 export type NotificationStatusId =

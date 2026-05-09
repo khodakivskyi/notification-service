@@ -2,6 +2,9 @@
   "name": "@khodakivskyi/notification-service-init",
   "version": "1.0.0",
   "type": "module",
+  "publishConfig": {
+    "access": "public"
+  },
   "bin": {
     "notification-service-init": "dist/index.js"
   },

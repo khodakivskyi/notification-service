@@ -38,10 +38,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install CLI dependencies (prepublishOnly / tests)
+        run: npm ci
+        working-directory: cli
+
+      - name: Enforce releasable squash message on publish
+        run: node scripts/check-publish-releasable.mjs last-commit
+
       - name: Run Semantic Release
         id: version
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION_BEFORE=$(node -p "require('./package.json').version")
           npx semantic-release
@@ -58,6 +66,7 @@ jobs:
   docker:
     name: Build and Push docker image
     needs: release
+    if: needs.release.outputs.new_release_published == 'true'
     runs-on: ubuntu-latest
     permissions:
       contents: read

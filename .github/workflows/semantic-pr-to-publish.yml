@@ -1,0 +1,28 @@
+name: Semantic PR (publish)
+
+# PR title can be e.g. Release_v2; releasable lines must live in commits (they become squash body).
+on:
+  pull_request:
+    branches: [publish]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    name: Releasable commits (for squash body)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Fetch base branch
+        run: git fetch origin ${{ github.base_ref }}:refs/remotes/origin/${{ github.base_ref }}
+
+      - name: Assert PR introduces releasable conventional lines
+        run: node scripts/check-publish-releasable.mjs range origin/${{ github.base_ref }}..HEAD
